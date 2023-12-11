@@ -62,9 +62,9 @@ jobs:
         run: |
           brew install ccache ninja create-dmg
           brew fetch --force --bottle-tag=monterey boost openssl@3 molten-vk
-          brew install $(brew --cache --bottle-tag=monterey boost)
-          brew install $(brew --cache --bottle-tag=monterey molten-vk)
-          brew reinstall $(brew --cache --bottle-tag=monterey openssl@3)
+          brew install $(brew --cache boost)
+          brew install $(brew --cache molten-vk)
+          brew reinstall $(brew --cache openssl@3)
           echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
           ccache --set-config=compiler_check=content
         if: matrix.os == 'macos-latest'
