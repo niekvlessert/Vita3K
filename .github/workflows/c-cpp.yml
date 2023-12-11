@@ -61,7 +61,7 @@ jobs:
       - name: Set up build environment (macos-latest)
         run: |
           brew install ccache ninja create-dmg
-          brew fetch --force --bottle-tag=monterey boost openssl@3 molten-vk
+          brew fetch --force boost openssl@3 molten-vk
           brew install $(brew --cache boost)
           brew install $(brew --cache molten-vk)
           brew reinstall $(brew --cache openssl@3)
