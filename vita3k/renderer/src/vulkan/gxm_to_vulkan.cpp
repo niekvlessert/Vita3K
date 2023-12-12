@@ -764,7 +764,8 @@ vk::Format translate_format(SceGxmTextureBaseFormat base_format) {
         return vk::Format::eR16G16B16A16Sfloat;
 
     case SCE_GXM_TEXTURE_BASE_FORMAT_U5U6U5:
-        return vk::Format::eR5G6B5UnormPack16;
+        //return vk::Format::eR5G6B5UnormPack16;
+        return vk::Format::eR8G8B8A8Unorm;
     case SCE_GXM_TEXTURE_BASE_FORMAT_F11F11F10:
         return vk::Format::eB10G11R11UfloatPack32;
     case SCE_GXM_TEXTURE_BASE_FORMAT_SE5M9M9M9:
