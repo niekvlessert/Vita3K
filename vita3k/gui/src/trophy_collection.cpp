@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -71,7 +71,7 @@ static bool load_trophy_progress(IOState &io, const SceUID &progress_input_file,
     }
 
     // Read trophy progress
-    std::fill(np_com_id_info[np_com_id].context.trophy_progress, np_com_id_info[np_com_id].context.trophy_progress + (MAX_TROPHIES >> 5), 0);
+    std::fill_n(np_com_id_info[np_com_id].context.trophy_progress, (MAX_TROPHIES >> 5), 0);
     if (read_trophy_progress_file(np_com_id_info[np_com_id].context.trophy_progress, sizeof(np_com_id_info[np_com_id].context.trophy_progress)) != sizeof(np_com_id_info[np_com_id].context.trophy_progress)) {
         LOG_ERROR("Fail read trophy progress");
         return false;
@@ -128,7 +128,9 @@ void init_trophy_collection(GuiState &gui, EmuEnvState &emuenv) {
     const auto TROPHY_PATH{ emuenv.pref_path / "ux0/user" / emuenv.io.user_id / "trophy" };
     const auto TROPHY_CONF_PATH = TROPHY_PATH / "conf";
 
-    gui.trophy_np_com_id_list_icons.clear(), np_com_id_info.clear(), np_com_id_list.clear();
+    gui.trophy_np_com_id_list_icons.clear();
+    np_com_id_info.clear();
+    np_com_id_list.clear();
 
     if (fs::exists(TROPHY_CONF_PATH) && !fs::is_empty(TROPHY_CONF_PATH)) {
         for (const auto &trophy : fs::directory_iterator(TROPHY_CONF_PATH)) {
@@ -151,7 +153,7 @@ void init_trophy_collection(GuiState &gui, EmuEnvState &emuenv) {
 
                 // Open trophy progress file
                 const auto trophy_progress_save_file = device::construct_normalized_path(VitaIoDevice::ux0, "user/" + emuenv.io.user_id + "/trophy/data/" + np_com_id + "/TROPUSR.DAT");
-                const auto progress_input_file = open_file(emuenv.io, trophy_progress_save_file.c_str(), SCE_O_RDONLY, emuenv.pref_path.wstring(), "load_trophy_progress_file");
+                const auto progress_input_file = open_file(emuenv.io, trophy_progress_save_file.c_str(), SCE_O_RDONLY, emuenv.pref_path, "load_trophy_progress_file");
 
                 if (!load_trophy_progress(emuenv.io, progress_input_file, np_com_id)) {
                     LOG_ERROR("Fail load trophy progress for Np Com ID: {}, clean trophy file.", np_com_id);
@@ -172,7 +174,7 @@ void init_trophy_collection(GuiState &gui, EmuEnvState &emuenv) {
                 if (doc.load_file((trophy_conf_np_com_id_path / sfm_name).c_str())) {
                     const auto trophy_conf = doc.child("trophyconf");
                     if (np_com_id_info[np_com_id].context.trophy_count_by_group[0])
-                        np_com_id_info[np_com_id].group_id.push_back("000");
+                        np_com_id_info[np_com_id].group_id.emplace_back("000");
                     np_com_id_info[np_com_id].name["000"] = trophy_conf.child("title-name").text().as_string();
                     np_com_id_info[np_com_id].detail["000"] = trophy_conf.child("title-detail").text().as_string();
                     for (const auto &conf : trophy_conf) {
@@ -203,8 +205,8 @@ void init_trophy_collection(GuiState &gui, EmuEnvState &emuenv) {
                         if (np_com_id_info[np_com_id].unlocked_count["global"]) {
                             for (uint32_t i = 0; i < np_com_id_info[np_com_id].trophy_count_by_group[group_id]; i++, trophy_index++) {
                                 if (np_com_id_info[np_com_id].context.is_trophy_unlocked(trophy_index)) {
-                                    ++unlocked_type_count[group_id][(SceNpTrophyGrade)np_com_id_info[np_com_id].context.trophy_kinds[trophy_index]];
-                                    ++unlocked_type_count["global"][(SceNpTrophyGrade)np_com_id_info[np_com_id].context.trophy_kinds[trophy_index]];
+                                    ++unlocked_type_count[group_id][np_com_id_info[np_com_id].context.trophy_kinds[trophy_index]];
+                                    ++unlocked_type_count["global"][np_com_id_info[np_com_id].context.trophy_kinds[trophy_index]];
                                     ++np_com_id_info[np_com_id].unlocked_count[group_id];
                                 }
                             }
@@ -236,7 +238,7 @@ void init_trophy_collection(GuiState &gui, EmuEnvState &emuenv) {
                     int32_t height = 0;
                     vfs::FileBuffer buffer;
 
-                    vfs::read_file(VitaIoDevice::ux0, buffer, emuenv.pref_path.wstring(), "user/" + emuenv.io.user_id + "/trophy/conf/" + np_com_id + "/" + group.second);
+                    vfs::read_file(VitaIoDevice::ux0, buffer, emuenv.pref_path, "user/" + emuenv.io.user_id + "/trophy/conf/" + np_com_id + "/" + group.second);
 
                     if (buffer.empty()) {
                         LOG_WARN("Icon: '{}', Not found for NPComId: {}.", group.second, np_com_id);
@@ -291,7 +293,9 @@ static void get_trophy_list(GuiState &gui, EmuEnvState &emuenv, const std::strin
         return;
     }
 
-    gui.trophy_list.clear(), trophy_info.clear(), trophy_list.clear();
+    gui.trophy_list.clear();
+    trophy_info.clear();
+    trophy_list.clear();
 
     const std::string sfm_name = fs::exists(trophy_conf_id_path / fmt::format("TROP_{:0>2d}.SFM", emuenv.cfg.sys_lang)) ? fmt::format("TROP_{:0>2d}.SFM", emuenv.cfg.sys_lang) : "TROP.SFM";
 
@@ -311,16 +315,15 @@ static void get_trophy_list(GuiState &gui, EmuEnvState &emuenv, const std::strin
         }
     }
 
-    for (const auto &trophy : trophy_info) {
+    for (const auto &[trophy_id, _] : trophy_info) {
         int32_t width = 0;
         int32_t height = 0;
         vfs::FileBuffer buffer;
-        const std::string trophy_id = trophy.first;
         const std::string icon_name = fmt::format("TROP{}.PNG", trophy_id);
 
-        vfs::read_file(VitaIoDevice::ux0, buffer, emuenv.pref_path.wstring(), "user/" + emuenv.io.user_id + "/trophy/conf/" + np_com_id + "/" + icon_name);
+        vfs::read_file(VitaIoDevice::ux0, buffer, emuenv.pref_path, fmt::format("user/{}/trophy/conf/{}/{}", emuenv.io.user_id, np_com_id, icon_name));
         if (buffer.empty()) {
-            LOG_WARN("Trophy icon, Name: '{}', Not found for trophy id: {}.", icon_name, trophy.first);
+            LOG_WARN("Trophy icon, Name: '{}', Not found for trophy id: {}.", icon_name, trophy_id);
             continue;
         }
         stbi_uc *data = stbi_load_from_memory(&buffer[0], static_cast<int>(buffer.size()), &width, &height, nullptr, STBI_rgb_alpha);
@@ -354,12 +357,12 @@ static void get_trophy_list(GuiState &gui, EmuEnvState &emuenv, const std::strin
 
         const auto unlocked = (time_t)np_com_id_info[np_com_id].context.unlock_timestamps[string_utils::stoi_def(trophy_id, 0, "trophy id")];
         // Check earned trophy and set time
-        if (np_com_id_info[np_com_id].context.is_trophy_unlocked(string_utils::stoi_def(trophy.first, 0, "trophy id"))) {
+        if (np_com_id_info[np_com_id].context.is_trophy_unlocked(string_utils::stoi_def(trophy_id, 0, "trophy id"))) {
             trophy_info[trophy_id].earned = true;
             SAFE_LOCALTIME(&unlocked, &trophy_info[trophy_id].unlocked_time);
         }
 
-        const auto grade = uint32_t(np_com_id_info[np_com_id].context.trophy_kinds[string_utils::stoi_def(trophy.first, 0, "trophy id")]);
+        const auto grade = uint32_t(np_com_id_info[np_com_id].context.trophy_kinds[string_utils::stoi_def(trophy_id, 0, "trophy id")]);
 
         trophy_list.push_back({ trophy_id, unlocked, grade, trophy_info[trophy_id].name });
 

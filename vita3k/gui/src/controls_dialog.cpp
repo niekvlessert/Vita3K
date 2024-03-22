@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
 
 #include "private.h"
 
-#include <SDL_scancode.h>
 #include <config/functions.h>
 #include <config/state.h>
 #include <emuenv/state.h>
@@ -45,14 +44,6 @@ static char const *SDL_key_to_string[]{ "[unset]", "[unknown]", "[unknown]", "[u
     "Keypad Dec", "Keypad HexaDec", "[unset]", "[unset]", "LCtrl", "LShift", "LAlt", "Win/Cmd", "RCtrl", "RShift", "RAlt", "RWin/Cmd" };
 
 static const short total_key_entries = 28;
-
-static bool exists_in_array(int *ptr, int val, size_t size) {
-    if (!ptr || !size) {
-        return false;
-    }
-    int *end = ptr + size;
-    return std::find(ptr, end, val) != end;
-}
 
 static void prepare_map_array(EmuEnvState &emuenv, std::array<int, total_key_entries> &map) {
     map[0] = emuenv.cfg.keyboard_leftstick_up;
@@ -97,6 +88,7 @@ static void remapper_button(GuiState &gui, EmuEnvState &emuenv, int *button, con
     ImGui::TableSetColumnIndex(1);
     // the association of the key
     int key_association = *button;
+    ImGui::PushID(button_name);
     if (ImGui::Button(SDL_key_to_string[key_association])) {
         gui.old_captured_key = key_association;
         gui.is_capturing_keys = true;
@@ -108,7 +100,7 @@ static void remapper_button(GuiState &gui, EmuEnvState &emuenv, int *button, con
             *button = gui.captured_key;
             if (*button < 0 || *button > 231)
                 *button = 0;
-            else if (gui.is_key_capture_dropped || (!gui.is_capturing_keys && *button != key_association && exists_in_array(original_state.data(), *button, original_state.size()))) {
+            else if (gui.is_key_capture_dropped || (!gui.is_capturing_keys && *button != key_association && vector_utils::contains(original_state, *button))) {
                 // undo the changes
                 *button = key_association;
                 gui.is_key_capture_dropped = false;
@@ -117,6 +109,7 @@ static void remapper_button(GuiState &gui, EmuEnvState &emuenv, int *button, con
         }
         config::serialize_config(emuenv.cfg, emuenv.cfg.config_path);
     }
+    ImGui::PopID();
 }
 
 void draw_controls_dialog(GuiState &gui, EmuEnvState &emuenv) {
@@ -195,6 +188,7 @@ void draw_controls_dialog(GuiState &gui, EmuEnvState &emuenv) {
         ImGui::TableSetupColumn("button");
         ImGui::TableSetupColumn("mapped_button");
         remapper_button(gui, emuenv, &emuenv.cfg.keyboard_toggle_texture_replacement, lang["toggle_texture_replacement"].c_str());
+        remapper_button(gui, emuenv, &emuenv.cfg.keyboard_take_screenshot, lang["take_a_screenshot"].c_str());
         ImGui::EndTable();
     }
 

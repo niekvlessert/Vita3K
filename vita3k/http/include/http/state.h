@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ struct ci_compare {
 
 typedef std::map<std::string, std::string, ci_compare> HeadersMapType;
 
-enum SceHttpsErrorCode {
+enum SceHttpsErrorCode : uint32_t {
     SCE_HTTPS_ERROR_CERT = 0x80435060,
     SCE_HTTPS_ERROR_HANDSHAKE = 0x80435061,
     SCE_HTTPS_ERROR_IO = 0x80435062,
@@ -167,7 +167,7 @@ enum SceHttpAddHeaderMode : SceUInt32 {
     SCE_HTTP_HEADER_ADD
 };
 
-enum SceHttpErrorCode {
+enum SceHttpErrorCode : uint32_t {
     SCE_HTTP_ERROR_BEFORE_INIT = 0x80431001,
     SCE_HTTP_ERROR_ALREADY_INITED = 0x80431020,
     SCE_HTTP_ERROR_BUSY = 0x80431021,

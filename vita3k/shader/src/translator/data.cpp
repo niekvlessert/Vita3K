@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -78,10 +78,14 @@ bool USSETranslatorVisitor::vmov(
     inst.opr.dest = decode_dest(inst.opr.dest, dest_n, dest_bank_sel, dest_bank_ext, is_double_regs, reg_bits, m_second_program);
     inst.opr.src1 = decode_src12(inst.opr.src1, src1_n, src1_bank_sel, src1_bank_ext, is_double_regs, reg_bits, m_second_program);
 
-    dest_mask = decode_write_mask(inst.opr.dest.bank, dest_mask, move_data_type == DataType::F16);
+    if (move_data_type == DataType::F16 || move_data_type == DataType::F32)
+        dest_mask = decode_write_mask(inst.opr.dest.bank, dest_mask, move_data_type == DataType::F16);
+    else if (!is_double_regs)
+        // only floating point moves are vectorized
+        dest_mask = 0b1;
 
     // Velocity uses a vec4 table, non-extended, so i assumes type=vec4, extended=false
-    inst.opr.src1.swizzle = decode_vec34_swizzle(src0_swiz, false, 2);
+    inst.opr.src1.swizzle = is_double_regs ? decode_vec34_swizzle(src0_swiz, false, 2) : (Swizzle4 SWIZZLE_CHANNEL_4_DEFAULT);
 
     inst.opr.src1.type = move_data_type;
     inst.opr.dest.type = move_data_type;
@@ -685,7 +689,7 @@ bool USSETranslatorVisitor::vldst(
             return true;
 
         int offset = m_spirv_params.literal_buffer_base + inst.opr.src1.num + inst.opr.src2.num;
-        const uint8_t *literal_buffer = reinterpret_cast<const uint8_t *>(&m_program.literal_buffer_data_offset) + m_program.literal_buffer_data_offset;
+        const uint8_t *literal_buffer = m_program.literal_buffer_data();
         const float literal = *reinterpret_cast<const float *>(literal_buffer + offset);
 
         store(to_store, m_b.makeFloatConstant(literal), 0b1);
@@ -752,7 +756,7 @@ bool USSETranslatorVisitor::vldst(
     spv::Id base = m_b.createBinOp(spv::OpIAdd, i32_type, source_0, source_1);
 
     if (m_features.support_memory_mapping) {
-        utils::buffer_address_access(m_b, m_spirv_params, m_util_funcs, m_features, to_store, to_store_offset, base, get_data_type_size(type_to_ldst), current_number_to_fetch, m_program.is_fragment(), -1, is_store);
+        utils::buffer_address_access(m_b, m_spirv_params, m_util_funcs, m_features, to_store, to_store_offset, base, get_data_type_size(type_to_ldst), current_number_to_fetch, -1, is_store);
     } else {
         if (is_store) {
             LOG_ERROR("Store opcode is not supported without memory mapping");

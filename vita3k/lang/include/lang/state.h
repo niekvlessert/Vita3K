@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -307,6 +307,7 @@ struct LangState {
         { "toggle_gui_visibility_description", "Toggles between showing and hiding the GUI at the top of the screen while the app is running." },
         { "miscellaneous", "Miscellaneous" },
         { "toggle_texture_replacement", "Toggle Texture Replacement" },
+        { "take_a_screenshot", "Take A Screenshot" },
         { "error", "Error" },
         { "error_duplicate_key", "The key is used for other bindings or it is reserved." }
     };
@@ -528,6 +529,7 @@ struct LangState {
             { "refresh_list", "Refresh List" }
         };
         std::map<std::string, std::string> cpu = {
+            { "unicorn", "Unicorn (deprecated)" },
             { "cpu_backend", "CPU Backend" },
             { "select_cpu_backend", "Select your preferred CPU backend." },
             { "cpu_opt", "Enable optimizations" },
@@ -539,11 +541,18 @@ struct LangState {
             { "select_backend_renderer", "Select your preferred backend renderer." },
             { "gpu", "GPU (Reboot to apply)" },
             { "select_gpu", "Select the GPU Vita3K should run on." },
+            { "standard", "Standard" },
+            { "high", "High" },
             { "renderer_accuracy", "Renderer Accuracy" },
             { "v_sync", "V-Sync" },
             { "v_sync_description", "Disabling V-Sync can fix the speed issue in some games.\nIt is recommended to keep it enabled to avoid visual tearing." },
             { "disable_surface_sync", "Disable Surface Sync" },
             { "surface_sync_description", "Speed hack, check the box to disable surface syncing between CPU and GPU.\nSurface syncing is needed by a few games.\nGives a big performance boost if disabled (in particular when upscaling is on)." },
+            { "async_pipeline_compilation", "Asynchronous Pipeline Compilation" },
+            { "async_pipeline_compilation_description", "Allow pipelines to be compiled concurrently on multiple concurrent threads.\nThis decreases pipeline compilation stutter at the cost of temporary graphical glitches." },
+            { "nearest", "Nearest" },
+            { "bilinear", "Bilinear" },
+            { "bicubic", "Bicubic" },
             { "screen_filter", "Screen Filter" },
             { "screen_filter_description", "Set post-processing filter to apply." },
             { "internal_resolution_upscaling", "Internal Resolution Upscaling" },
@@ -559,7 +568,19 @@ struct LangState {
             { "shader_cache_description", "Check the box to enable shader cache to pre-compile it at game startup.\nUncheck to disable this feature." },
             { "spirv_shader", "Use Spir-V Shader (deprecated)" },
             { "spirv_shader_description", "Pass generated Spir-V shader directly to driver.\nNote that some beneficial extensions will be disabled,\nand not all GPUs are compatible with this." },
-            { "clean_shaders", "Clean Shaders Cache and Log" }
+            { "clean_shaders", "Clean Shaders Cache and Log" },
+            { "fps_hack", "FPS Hack" },
+            { "fps_hack_description", "Game hack which allows some games running at 30 FPS to run at 60 FPS on the emulator.\nNote that this is a hack and will only work on some games.\nOn other games, it may have no effect or make them run twice as fast." }
+        };
+        std::map<std::string, std::string> audio = {
+            { "title", "Audio" },
+            { "audio_backend", "Audio Backend" },
+            { "select_audio_backend", "Select your preferred audio backend." },
+            { "audio_volume", "Audio Volume" },
+            { "audio_volume_description", "Adjusts the volume percentage of all audio outputs." },
+            { "enable_ngs_support", "Enable NGS support" },
+            { "ngs_description", "Uncheck the box to disable support for advanced audio library NGS." }
+
         };
         std::map<std::string, std::string> system = {
             { "title", "System" },
@@ -577,10 +598,12 @@ struct LangState {
         std::map<std::string, std::string> emulator = {
             { "title", "Emulator" },
             { "boot_apps_full_screen", "Boot apps in full screen" },
-            { "audio_backend", "Audio Backend" },
-            { "select_audio_backend", "Select your preferred audio backend." },
-            { "enable_ngs_support", "Enable NGS support" },
-            { "ngs_description", "Uncheck the box to disable support for advanced audio library NGS." },
+            { "trace", "Trace" },
+            { "info", "Info" },
+            { "warning", "Warning" },
+            { "error", "Error" },
+            { "critical", "Critical" },
+            { "off", "Off" },
             { "log_level", "Log Level" },
             { "select_log_level", "Select your preferred log level." },
             { "archive_log", "Archive Log" },
@@ -598,8 +621,18 @@ struct LangState {
             { "check_for_updates_description", "Automatically check for updates at startup." },
             { "performance_overlay", "Performance overlay" },
             { "performance_overlay_description", "Display performance information on the screen as an overlay." },
+            { "minimum", "Minimum" },
+            { "low", "Low" },
+            { "medium", "Medium" },
+            { "maximum", "Maximum" },
             { "detail", "Detail" },
             { "select_detail", "Select your preferred perfomance overlay detail." },
+            { "top_left", "Top Left" },
+            { "top_center", "Top Center" },
+            { "top_right", "Top Right" },
+            { "bottom_left", "Bottom Left" },
+            { "bottom_center", "Bottom Center" },
+            { "bottom_right", "Bottom Right" },
             { "position", "Position" },
             { "select_position", "Select your preferred perfomance overlay position." },
             { "case_insensitive", "Check to enable case-insensitive path finding on case sensitive filesystems.\nRESETS ON RESTART" },
@@ -690,6 +723,14 @@ struct LangState {
         };
     };
     SettingsDialog settings_dialog;
+    std::map<std::string, std::string> sys_apps_title = {
+        { "browser", "Browser" },
+        { "internet_browser", "Internet Browser" },
+        { "trophies", "Trophies" },
+        { "trophy_collection", "Trophy Collection" },
+        { "settings", "Settings" },
+        { "content_manager", "Content Manager" }
+    };
     std::map<std::string, std::string> trophy_collection = {
         { "delete_trophy", "Delete Trophy" },
         { "trophy_deleted", "This trophy information saved on this user will be deleted." },

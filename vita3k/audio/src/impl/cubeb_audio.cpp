@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,8 +26,8 @@
 static long impl_cubeb_audio_callback(cubeb_stream *stream, void *user_data, const void *input, void *output, long nframes) {
     assert(user_data != nullptr);
     assert(stream != nullptr);
-    CubebAudioOutPort *port = reinterpret_cast<CubebAudioOutPort *>(user_data);
-    uint8_t *output_buffer = reinterpret_cast<uint8_t *>(output);
+    CubebAudioOutPort *port = static_cast<CubebAudioOutPort *>(user_data);
+    uint8_t *output_buffer = static_cast<uint8_t *>(output);
 
     int bytes_given = 0;
     const int bytes_to_give = nframes * port->spec.channels * sizeof(uint16_t);

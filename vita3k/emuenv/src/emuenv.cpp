@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@
 #include <ctrl/state.h>
 #include <dialog/state.h>
 #include <display/state.h>
-#include <emuenv/window.h>
 #include <gxm/state.h>
 #include <http/state.h>
 #include <ime/state.h>
@@ -37,7 +36,6 @@
 #include <regmgr/state.h>
 #include <renderer/state.h>
 #include <touch/state.h>
-#include <util/string_utils.h>
 
 #include <gdbstub/state.h>
 

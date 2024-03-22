@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -100,7 +100,7 @@ void draw_pkg_install_dialog(GuiState &gui, EmuEnvState &emuenv) {
         } else if (state == "license") {
             result = host::dialog::filesystem::open_file(license_path, { { "PlayStation Vita software license file", { "bin", "rif" } } });
             if (result == host::dialog::filesystem::Result::SUCCESS) {
-                fs::ifstream binfile(license_path.wstring(), std::ios::in | std::ios::binary | std::ios::ate);
+                fs::ifstream binfile(license_path.native(), std::ios::in | std::ios::binary | std::ios::ate);
                 zRIF = rif2zrif(binfile);
                 state = "install";
             } else {
@@ -128,7 +128,7 @@ void draw_pkg_install_dialog(GuiState &gui, EmuEnvState &emuenv) {
                 state = "install";
         } else if (state == "install") {
             std::thread installation([&emuenv]() {
-                if (install_pkg(pkg_path.string(), emuenv, zRIF, progress_callback)) {
+                if (install_pkg(pkg_path.native(), emuenv, zRIF, progress_callback)) {
                     std::lock_guard<std::mutex> lock(install_mutex);
                     state = "success";
                 } else {
@@ -153,11 +153,11 @@ void draw_pkg_install_dialog(GuiState &gui, EmuEnvState &emuenv) {
             ImGui::SetCursorPos(ImVec2(POS_BUTTON, ImGui::GetWindowSize().y - BUTTON_SIZE.y - (20.f * SCALE.y)));
             if (ImGui::Button(common["ok"].c_str(), BUTTON_SIZE)) {
                 if (delete_pkg_file) {
-                    fs::remove(fs::path(pkg_path.wstring()));
+                    fs::remove(fs::path(pkg_path.native()));
                     delete_pkg_file = false;
                 }
                 if (delete_license_file) {
-                    fs::remove(fs::path(license_path.wstring()));
+                    fs::remove(fs::path(license_path.native()));
                     delete_license_file = false;
                 }
                 if ((emuenv.app_info.app_category.find("gd") != std::string::npos) || (emuenv.app_info.app_category.find("gp") != std::string::npos)) {

@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 #pragma once
 
 #include <shader/usse_types.h>
+#include <util/log.h>
 
 #include <fstream>
 #include <memory>
@@ -27,7 +28,7 @@ namespace shader {
 namespace usse {
 namespace disasm {
 
-extern std::string *disasm_storage;
+extern thread_local std::stringstream *disasm_storage;
 
 //
 // Disasm helpers
@@ -47,10 +48,10 @@ std::string swizzle_to_str(Swizzle<s> swizz, const Imm4 write_mask);
 } // namespace shader
 
 // TODO: make LOG_RAW
-#define LOG_DISASM(fmt_str, ...)                                        \
-    {                                                                   \
-        auto fmt_disasm = fmt::format(fmt_str, ##__VA_ARGS__);          \
-        std::cout << fmt_disasm << std::endl;                           \
-        if (shader::usse::disasm::disasm_storage)                       \
-            *shader::usse::disasm::disasm_storage += fmt_disasm + '\n'; \
+#define LOG_DISASM(fmt_str, ...)                                         \
+    {                                                                    \
+        auto fmt_disasm = fmt::format(fmt_str, ##__VA_ARGS__);           \
+        LOG_TRACE("\t{}", fmt_disasm);                                   \
+        if (shader::usse::disasm::disasm_storage)                        \
+            *shader::usse::disasm::disasm_storage << fmt_disasm << '\n'; \
     }

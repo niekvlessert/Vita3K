@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -146,7 +146,7 @@ static void add_bind_to_table(GuiState &gui, EmuEnvState &emuenv, const SDL_Game
     ImGui::TableSetColumnIndex(0);
     ImGui::Text("%s", buttons_name[btn].c_str());
     ImGui::TableSetColumnIndex(1);
-    if (ImGui::Button(get_mapped_button_name(SDL_GameControllerButton(emuenv.cfg.controller_binds[btn])).c_str())) {
+    if (ImGui::Button(get_mapped_button_name(static_cast<SDL_GameControllerButton>(emuenv.cfg.controller_binds[btn])).c_str())) {
         is_capturing_buttons = true;
         while (is_capturing_buttons) {
             // query SDL for button events

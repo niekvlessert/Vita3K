@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -40,36 +40,32 @@ GenericType translate_generic_type(const gxp::GenericParameterType &type) {
 
 std::tuple<DataType, std::string> get_parameter_type_store_and_name(const SceGxmParameterType &type) {
     switch (type) {
-    case SCE_GXM_PARAMETER_TYPE_F32: {
+    case SCE_GXM_PARAMETER_TYPE_F32:
         return std::make_tuple(DataType::F32, "float");
-    }
 
-    case SCE_GXM_PARAMETER_TYPE_F16: {
+    case SCE_GXM_PARAMETER_TYPE_F16:
         return std::make_tuple(DataType::F16, "half");
-    }
 
-    case SCE_GXM_PARAMETER_TYPE_U16: {
+    case SCE_GXM_PARAMETER_TYPE_U16:
         return std::make_tuple(DataType::UINT16, "ushort");
-    }
 
-    case SCE_GXM_PARAMETER_TYPE_S16: {
+    case SCE_GXM_PARAMETER_TYPE_S16:
         return std::make_tuple(DataType::INT16, "ishort");
-    }
 
-    case SCE_GXM_PARAMETER_TYPE_U8: {
+    case SCE_GXM_PARAMETER_TYPE_U8:
         return std::make_tuple(DataType::UINT8, "uchar");
-    }
 
-    case SCE_GXM_PARAMETER_TYPE_S8: {
+    case SCE_GXM_PARAMETER_TYPE_S8:
         return std::make_tuple(DataType::INT8, "ichar");
-    }
 
-    case SCE_GXM_PARAMETER_TYPE_U32: {
+    case SCE_GXM_PARAMETER_TYPE_C10:
+        return std::make_tuple(DataType::C10, "fixed");
+
+    case SCE_GXM_PARAMETER_TYPE_U32:
         return std::make_tuple(DataType::UINT32, "uint");
-    }
-    case SCE_GXM_PARAMETER_TYPE_S32: {
+
+    case SCE_GXM_PARAMETER_TYPE_S32:
         return std::make_tuple(DataType::INT32, "int");
-    }
 
     default:
         return std::make_tuple(DataType::UNK, "unk");
@@ -80,8 +76,8 @@ ProgramInput get_program_input(const SceGxmProgram &program) {
     ProgramInput program_input;
     std::map<int, UniformBuffer> uniform_buffers;
 
-    // TODO split these to functions (e.g. get_literals, get_paramters)
-    const SceGxmProgramParameter *const gxp_parameters = gxp::program_parameters(program);
+    // TODO split these to functions (e.g. get_literals, get_parameters)
+    auto gxp_parameters = program.program_parameters();
     auto vertex_varyings_ptr = program.vertex_varyings();
 
     std::uint32_t investigated_ub = 0;
@@ -108,8 +104,7 @@ ProgramInput get_program_input(const SceGxmProgram &program) {
                 offset = container->base_sa_offset + parameter.resource_index;
             }
 
-            const auto parameter_type = gxp::parameter_type(parameter);
-            const auto [store_type, param_type_name] = shader::get_parameter_type_store_and_name(parameter_type);
+            const auto [store_type, param_type_name] = shader::get_parameter_type_store_and_name(parameter.type);
 
             // Make the type
             gxp::GenericParameterType param_type = gxp::parameter_generic_type(parameter);
@@ -160,7 +155,7 @@ ProgramInput get_program_input(const SceGxmProgram &program) {
                     buffer.size = std::max(parameter.resource_index + parameter_size_in_f32, buffer.size);
 
                     if (!container) {
-                        buffer.reg_start_offset = std::min(buffer.reg_start_offset, static_cast<uint32_t>(offset));
+                        buffer.reg_start_offset = std::min(buffer.reg_start_offset, offset);
                     }
                 }
 
@@ -238,8 +233,7 @@ ProgramInput get_program_input(const SceGxmProgram &program) {
         uniform_buffers.emplace(14, buffer);
     }
 
-    const auto buffer_infoes = reinterpret_cast<const SceGxmUniformBufferInfo *>(
-        reinterpret_cast<const std::uint8_t *>(&program.uniform_buffer_offset) + program.uniform_buffer_offset);
+    const auto buffer_infoes = program.uniform_buffer();
 
     const auto buffer_container = gxp::get_container_by_index(program, 19);
     const uint32_t base_offset = buffer_container ? buffer_container->base_sa_offset : 0;
@@ -305,8 +299,7 @@ ProgramInput get_program_input(const SceGxmProgram &program) {
 
     if (container) {
         // Create dependent sampler
-        const SceGxmDependentSampler *dependent_samplers = reinterpret_cast<const SceGxmDependentSampler *>(reinterpret_cast<const std::uint8_t *>(&program.dependent_sampler_offset)
-            + program.dependent_sampler_offset);
+        auto dependent_samplers = program.dependent_sampler();
 
         for (std::uint32_t i = 0; i < program.dependent_sampler_count; i++) {
             const std::uint32_t rsc_index = dependent_samplers[i].resource_index_layout_offset / 4;
@@ -341,8 +334,7 @@ ProgramInput get_program_input(const SceGxmProgram &program) {
         }
     }
 
-    const std::uint32_t *literals = reinterpret_cast<const std::uint32_t *>(reinterpret_cast<const std::uint8_t *>(&program.literals_offset)
-        + program.literals_offset);
+    auto literals = program.literals();
 
     // Get base SA offset for literal
     // The container index of those literals are 16
@@ -353,18 +345,15 @@ ProgramInput get_program_input(const SceGxmProgram &program) {
         container = gxp::get_container_by_index(program, 19);
     }
     if (container) {
-        for (std::uint32_t i = 0; i < program.literals_count * 2; i += 2) {
-            auto literal_offset = container->base_sa_offset + literals[i];
-            auto literal_data = *reinterpret_cast<const float *>(&literals[i + 1]);
-
+        for (std::uint32_t i = 0; i < program.literals_count; ++i) {
             LiteralInputSource source;
-            source.data = literal_data;
+            source.data = literals[i].data;
 
             Input item;
             item.component_count = 1;
             item.type = DataType::F32;
             item.bank = RegisterBank::SECATTR;
-            item.offset = literal_offset;
+            item.offset = container->base_sa_offset + literals[i].offset;
             item.array_size = 1;
             item.generic_type = GenericType::SCALER;
             item.source = source;

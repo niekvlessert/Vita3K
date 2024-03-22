@@ -39,9 +39,6 @@ option(CAPSTONE_ARCHITECTURE_DEFAULT "Whether architectures are enabled by defau
 option(CAPSTONE_ARM_SUPPORT "ARM support" ON)
 add_subdirectory(capstone EXCLUDE_FROM_ALL)
 
-add_library(crypto-algorithms STATIC crypto-algorithms/sha256.c crypto-algorithms/sha256.h)
-target_include_directories(crypto-algorithms PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/crypto-algorithms")
-
 add_library(dirent INTERFACE)
 
 if(WIN32)
@@ -66,6 +63,9 @@ target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 add_library(ddspp INTERFACE)
 target_include_directories(ddspp INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/ddspp")
 
+add_library(cppcommon STATIC CppCommon/source/cpu.cpp CppCommon/source/environment.cpp)
+target_include_directories(cppcommon PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/CppCommon")
+
 add_library(glad STATIC "${CMAKE_CURRENT_SOURCE_DIR}/glad/src/gl.c")
 target_include_directories(glad PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/glad/include")
 
@@ -77,6 +77,9 @@ add_library(googletest STATIC googletest/googletest/src/gtest_main.cc googletest
 target_include_directories(googletest PUBLIC googletest/googletest/include)
 target_include_directories(googletest PRIVATE googletest/googletest)
 target_compile_definitions(googletest PUBLIC GTEST_HAS_PTHREAD=0)
+
+add_library(concurrentqueue INTERFACE)
+target_include_directories(concurrentqueue INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/concurrentqueue")
 
 add_subdirectory(libfat16)
 
@@ -246,8 +249,6 @@ target_include_directories(vma INTERFACE
 
 add_subdirectory(ffmpeg)
 
-add_subdirectory(psvpfstools)
-
 if(APPLE)
  	execute_process(
  		COMMAND brew --prefix openssl
@@ -282,7 +283,7 @@ if(NOT OPENSSL_FOUND)
 				WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/external/openssl")
 		endif()
 
-		set(OPENSSL_ROOT_DIR "${CMAKE_BINARY_DIR}/external/openssl/openssl-3/x64")
+		set(OPENSSL_ROOT_DIR "${CMAKE_BINARY_DIR}/external/openssl/openssl-3.1/x64")
 	endif()
 
 	find_package(OpenSSL REQUIRED)
@@ -293,7 +294,11 @@ message("OpenSSL libraries: ${OPENSSL_LIBRARIES}")
 
 add_library(ssl INTERFACE)
 target_link_libraries(ssl INTERFACE OpenSSL::SSL)
+add_library(crypto INTERFACE)
+target_link_libraries(crypto INTERFACE OpenSSL::Crypto)
 
+# Must be after openssl
+add_subdirectory(psvpfstools)
 
 find_package(CURL QUIET)
 if(NOT CURL_FOUND)

@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -399,7 +399,7 @@ EXPORT(SceInt32, _sceAppMgrLoadExec, const char *appPath, Ptr<char> const argv[]
 
     // Load exec executable
     vfs::FileBuffer exec_buffer;
-    if (vfs::read_app_file(exec_buffer, emuenv.pref_path.wstring(), emuenv.io.app_path, exec_path)) {
+    if (vfs::read_app_file(exec_buffer, emuenv.pref_path, emuenv.io.app_path, exec_path)) {
         if (argv && argv->get(emuenv.mem)) {
             size_t args = 0;
             emuenv.load_exec_argv = "\"";

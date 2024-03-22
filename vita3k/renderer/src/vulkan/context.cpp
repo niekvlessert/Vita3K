@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -92,6 +92,12 @@ void VKContext::wait_thread_function(const MemState &mem) {
                            wait_for_fences();
 
                            renderer::subject_done(request.sync, request.timestamp);
+                       },
+                       [&](CallbackRequest &request) {
+                           if (request.callback) {
+                               (*request.callback)();
+                               delete request.callback;
+                           }
                        } },
             *wait_request);
     }
@@ -505,6 +511,8 @@ void new_frame(VKContext &context) {
     if (context.state.features.support_memory_mapping) {
         FrameDoneRequest request = { context.frame_timestamp };
         context.state.request_queue.push(request);
+
+        context.state.surface_cache.clear_surfaces_changed();
     }
 
     context.frame_timestamp++;

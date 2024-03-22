@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -816,6 +816,7 @@ NID(sceCameraImportDialogGetResult, 0x7B339AA2)
 NID(sceCameraImportDialogGetStatus, 0x86AE7314)
 NID(sceCameraImportDialogInit, 0xE525BDB0)
 NID(sceCameraImportDialogTerm, 0x8ED0C83C)
+NID(sceCommonDialog_B7D4C911, 0xB7D4C911)
 NID(sceCommonDialogGetWorkerThreadId, 0xD4C37375)
 NID(sceCommonDialogIsRunning, 0x043A353E)
 NID(sceCommonDialogSetConfigParam, 0xBECD35C8)

@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ void hex_buf(const std::uint8_t *hash, char *dst, const std::size_t source_size)
 
 template <size_t N>
 const std::string hex_string(const std::array<uint8_t, N> &hash) {
-    std::string dst(2 * N + 1, 0);
+    std::string dst(2 * N, 0);
     hex_buf(hash.data(), dst.data(), N);
 
     return dst;

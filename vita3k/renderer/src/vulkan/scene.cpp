@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,7 +23,6 @@
 #include <config/state.h>
 #include <spdlog/fmt/bin_to_hex.h>
 
-#include <util/align.h>
 #include <util/log.h>
 
 namespace renderer::vulkan {
@@ -68,7 +67,7 @@ void set_uniform_buffer(VKContext &context, const MemState &mem, const ShaderPro
 void mid_scene_flush(VKContext &context, const SceGxmNotification notification) {
     // two cases :
     // notification.addr is 0: this means that the mid scene flush must be used as a barrier in the renderpass
-    // notification.addr is not 0: this means the app is waiting for this part to be finished to re-use the ressources
+    // notification.addr is not 0: this means the app is waiting for this part to be finished to re-use the resources
 
     // Note: however, when testing, the barrier inside a pipeline does not work (or not entirely, depending on the GPU)
     // maybe because I'm writing using buffer device addresses, not sure...
@@ -168,12 +167,8 @@ static void draw_bind_descriptors(VKContext &context, MemState &mem) {
     descriptors[0] = context.global_set;
     descriptors[1] = context.rendertarget_set;
 
-    const uint16_t vertex_textures_count = reinterpret_cast<VertexProgram *>(
-        context.record.vertex_program.get(mem)->renderer_data.get())
-                                               ->texture_count;
-    const uint16_t fragment_texture_count = reinterpret_cast<VKFragmentProgram *>(
-        context.record.fragment_program.get(mem)->renderer_data.get())
-                                                ->texture_count;
+    const uint16_t vertex_textures_count = context.record.vertex_program.get(mem)->renderer_data->texture_count;
+    const uint16_t fragment_texture_count = context.record.fragment_program.get(mem)->renderer_data->texture_count;
 
     vk::PipelineLayout pipeline_layout = state.pipeline_cache.pipeline_layouts[vertex_textures_count][fragment_texture_count];
 
@@ -185,7 +180,6 @@ static void draw_bind_descriptors(VKContext &context, MemState &mem) {
     context.last_frag_texture_count = fragment_texture_count;
 
     {
-        int set_idx = 0;
         if (need_vert_descr) {
             context.last_vert_texture_descriptor = retrieve_descriptor(context, true, vertex_textures_count);
         }
@@ -254,21 +248,6 @@ static void bind_vertex_streams(VKContext &context, MemState &mem) {
     GxmRecordState &state = context.record;
     const SceGxmVertexProgram &vertex_program = *state.vertex_program.get(mem);
     VertexProgram *vkvert = vertex_program.renderer_data.get();
-
-    // we need to do another check here (the same is done in pipeline_cache)
-    // because if a game (like Secret of Mana) uses two programs with the same shaders and the same vertex input stripped
-    // the pipeline cache won't add stripped symbols for the second program
-    if (!vkvert->stripped_symbols_checked) {
-        // Insert some symbols here
-        const SceGxmProgram *vertex_program_body = vertex_program.program.get(mem);
-        if (vertex_program_body && (vertex_program_body->primary_reg_count != 0)) {
-            for (std::size_t i = 0; i < vertex_program.attributes.size(); i++) {
-                vkvert->attribute_infos.emplace(vertex_program.attributes[i].regIndex, shader::usse::AttributeInformation(static_cast<std::uint16_t>(i), SCE_GXM_PARAMETER_TYPE_F32, false, false, false));
-            }
-        }
-
-        vkvert->stripped_symbols_checked = true;
-    }
 
     int max_stream_idx = -1;
 
@@ -385,13 +364,23 @@ void draw(VKContext &context, SceGxmPrimitiveType type, SceGxmIndexFormat format
     if (context.refresh_pipeline || type != context.last_primitive) {
         context.refresh_pipeline = false;
         context.last_primitive = type;
-        vk::Pipeline new_pipeline = context.state.pipeline_cache.retrieve_pipeline(context, type, mem);
+
+        // We don't want to defer cases where we draw a whole quad over the screen as these draws could be necessary
+        // to be able to see anything
+        bool can_be_whole_quad = instance_count == 1 && count <= 6;
+        vk::Pipeline new_pipeline = context.state.pipeline_cache.retrieve_pipeline(context, type, !can_be_whole_quad, mem);
 
         if (new_pipeline != context.current_pipeline) {
             context.current_pipeline = new_pipeline;
-            context.render_cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, context.current_pipeline);
+
+            if (new_pipeline != nullptr)
+                context.render_cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, context.current_pipeline);
         }
     }
+
+    // can happen with asynchronous pipeline compilation
+    if (context.current_pipeline == nullptr)
+        return;
 
     if (config.log_active_shaders) {
         const std::string hash_text_f = hex_string(context.record.fragment_program.get(mem)->renderer_data->hash);
@@ -424,8 +413,8 @@ void draw(VKContext &context, SceGxmPrimitiveType type, SceGxmIndexFormat format
     vert_ublock.viewport_flag = (context.record.viewport_flat) ? 0.0f : 1.0f;
     vert_ublock.z_offset = context.record.z_offset;
     vert_ublock.z_scale = context.record.z_scale;
-    vert_ublock.screen_width = static_cast<float>(context.render_target->width / context.state.res_multiplier);
-    vert_ublock.screen_height = static_cast<float>(context.render_target->height / context.state.res_multiplier);
+    vert_ublock.screen_width = context.render_target->width / context.state.res_multiplier;
+    vert_ublock.screen_height = context.render_target->height / context.state.res_multiplier;
 
     if (context.curr_vert_ublock.changed || memcmp(&context.prev_vert_ublock, &vert_ublock, sizeof(vert_ublock)) != 0) {
         // TODO: this intermediate step can be avoided
@@ -436,7 +425,7 @@ void draw(VKContext &context, SceGxmPrimitiveType type, SceGxmIndexFormat format
 
     auto &frag_ublock = context.curr_frag_ublock.base_block;
     frag_ublock.writing_mask = context.record.writing_mask;
-    frag_ublock.res_multiplier = static_cast<float>(context.state.res_multiplier);
+    frag_ublock.res_multiplier = context.state.res_multiplier;
     const bool has_msaa = context.render_target->multisample_mode;
     const bool has_downscale = context.record.color_surface.downscale;
     if (has_msaa && !has_downscale)

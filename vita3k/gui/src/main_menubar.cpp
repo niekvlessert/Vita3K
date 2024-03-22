@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,8 +18,6 @@
 #include <config/state.h>
 #include <gui/functions.h>
 #include <io/state.h>
-
-#include <util/string_utils.h>
 
 #include "private.h"
 
@@ -84,10 +82,10 @@ static void draw_emulation_menu(GuiState &gui, EmuEnvState &emuenv) {
         ImGui::SetWindowFontScale(RES_SCALE.x);
         if (ImGui::BeginMenu(lang["last_apps_used"].c_str())) {
             if (!app_list_is_empty) {
-                for (auto i = 0; i < std::min(8, int32_t(gui.time_apps[emuenv.io.user_id].size())); i++) {
+                for (size_t i = 0; i < std::min<size_t>(8, gui.time_apps[emuenv.io.user_id].size()); i++) {
                     const auto time_app = gui.time_apps[emuenv.io.user_id][i];
                     const auto app_index = get_app_index(gui, time_app.app);
-                    if ((app_index != gui.app_selector.user_apps.end()) && (app_index != gui.app_selector.sys_apps.end()))
+                    if (app_index)
                         draw_app(*app_index);
                 }
             } else

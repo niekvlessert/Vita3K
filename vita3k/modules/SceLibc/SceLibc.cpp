@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -432,7 +432,7 @@ EXPORT(int, fileno) {
 EXPORT(int, fopen, const char *filename, const char *mode) {
     TRACY_FUNC(fopen, filename, mode);
     LOG_WARN_IF(mode[0] != 'r', "fopen({}, {})", filename, *mode);
-    return open_file(emuenv.io, filename, SCE_O_RDONLY, emuenv.pref_path.wstring(), export_name);
+    return open_file(emuenv.io, filename, SCE_O_RDONLY, emuenv.pref_path, export_name);
 }
 
 EXPORT(int, fopen_s) {

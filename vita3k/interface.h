@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -57,5 +57,5 @@ bool handle_events(EmuEnvState &emuenv, GuiState &gui);
 std::vector<ContentInfo> install_archive(EmuEnvState &emuenv, GuiState *gui, const fs::path &archive_path, const std::function<void(ArchiveContents)> &progress_callback = nullptr);
 uint32_t install_contents(EmuEnvState &emuenv, GuiState *gui, const fs::path &path);
 
-ExitCode load_app(int32_t &main_module_id, EmuEnvState &emuenv, const std::wstring &path);
+ExitCode load_app(int32_t &main_module_id, EmuEnvState &emuenv);
 ExitCode run_app(EmuEnvState &emuenv, int32_t main_module_id);

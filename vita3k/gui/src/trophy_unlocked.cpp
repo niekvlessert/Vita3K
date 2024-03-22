@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -53,8 +53,7 @@ static void draw_trophy_unlocked(GuiState &gui, EmuEnvState &emuenv, NpTrophyUnl
             gui.trophy_window_pos = ImVec2(ImGui::GetIO().DisplaySize.x + TROPHY_WINDOW_MARGIN_PADDING, TROPHY_WINDOW_Y_POS);
 
             // Load icon
-            gui.trophy_window_icon = load_image(gui, (const char *)callback_data.icon_buf.data(),
-                static_cast<std::uint32_t>(callback_data.icon_buf.size()));
+            gui.trophy_window_icon = load_image(gui, callback_data.icon_buf.data(), static_cast<std::uint32_t>(callback_data.icon_buf.size()));
         } else if (gui.trophy_window_frame_stage == TrophyAnimationStage::SLIDE_IN && gui.trophy_window_pos.x > target_window_pos.x) {
             gui.trophy_window_pos.x -= TROPHY_MOVE_DELTA;
         } else if (gui.trophy_window_frame_stage == TrophyAnimationStage::SLIDE_OUT && gui.trophy_window_pos.x < target_window_pos.x) {
@@ -78,7 +77,7 @@ static void draw_trophy_unlocked(GuiState &gui, EmuEnvState &emuenv, NpTrophyUnl
     ImGui::Columns(2, nullptr, false);
     ImGui::SetColumnWidth(0, TROPHY_WINDOW_ICON_SIZE + TROPHY_WINDOW_MARGIN_PADDING * 2);
     ImGui::SetCursorPos(ImVec2(TROPHY_WINDOW_MARGIN_PADDING, TROPHY_ICON_MARGIN_PADDING));
-    ImGui::Image((ImTextureID)gui.trophy_window_icon, ImVec2(TROPHY_WINDOW_ICON_SIZE, TROPHY_WINDOW_ICON_SIZE));
+    ImGui::Image(gui.trophy_window_icon, ImVec2(TROPHY_WINDOW_ICON_SIZE, TROPHY_WINDOW_ICON_SIZE));
     ImGui::NextColumn();
 
     auto common = gui.lang.common.main;

@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,12 +22,12 @@
 #include <kernel/state.h>
 #include <kernel/thread/thread_state.h>
 
-#include <spdlog/fmt/fmt.h>
+#include <fmt/core.h>
 
 namespace gui {
 
 void draw_thread_details_dialog(GuiState &gui, EmuEnvState &emuenv) {
-    ThreadStatePtr &thread = emuenv.kernel.threads[gui.thread_watch_index];
+    ThreadStatePtr thread = emuenv.kernel.get_thread(gui.thread_watch_index);
     CPUState &cpu = *thread->cpu;
 
     ImGui::Begin("Thread Viewer", &gui.debug_menu.thread_details_dialog);

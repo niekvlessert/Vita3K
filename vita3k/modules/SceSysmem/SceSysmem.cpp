@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -214,9 +214,9 @@ EXPORT(SceUID, sceKernelFindMemBlockByAddr, Address addr, uint32_t size) {
     const auto state = emuenv.kernel.obj_store.get<SysmemState>();
     const auto guard = std::lock_guard<std::mutex>(state->mutex);
 
-    for (auto it = state->blocks.begin(); it != state->blocks.end(); ++it) {
-        if (it->second->mappedBase.address() <= addr && (it->second->mappedBase.address() + it->second->mappedSize > addr)) {
-            return it->first;
+    for (auto &[id, block] : state->blocks) {
+        if (block->mappedBase.address() <= addr && (block->mappedBase.address() + block->mappedSize > addr)) {
+            return id;
         }
     }
     return RET_ERROR(SCE_KERNEL_ERROR_BLOCK_ERROR);
@@ -288,8 +288,7 @@ EXPORT(int, sceKernelGetMemBlockInfoByAddr, Address addr, SceKernelMemBlockInfo 
     const auto guard = std::lock_guard<std::mutex>(state->mutex);
     assert(addr >= 0);
     assert(info != nullptr);
-    for (Blocks::const_iterator it = state->blocks.begin(); it != state->blocks.end(); ++it) {
-        auto block_info = it->second;
+    for (const auto &[_, block_info] : state->blocks) {
         if (block_info->mappedBase.address() <= addr && (block_info->mappedBase.address() + block_info->mappedSize > addr)) {
             memcpy(info, block_info.get(), sizeof(SceKernelMemBlockInfo));
             return SCE_KERNEL_OK;

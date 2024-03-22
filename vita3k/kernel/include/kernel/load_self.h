@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,11 +20,14 @@
 #include <util/types.h>
 
 #include <string>
+#include <util/fs.h>
 
 struct Config;
 struct KernelState;
 struct MemState;
 template <class T>
 class Ptr;
+struct KernelModule;
 
-SceUID load_self(KernelState &kernel, MemState &mem, const void *self, const std::string &self_path, const std::string &dump_path);
+SceUID load_self(KernelState &kernel, MemState &mem, const void *self, const std::string &self_path, const fs::path &log_path);
+int unload_self(KernelState &kernel, MemState &mem, KernelModule &module);

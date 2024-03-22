@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,9 +17,7 @@
 
 #pragma once
 
-#include <array>
 #include <cstdint>
-#include <memory>
 #include <queue>
 #include <string>
 
@@ -100,6 +98,9 @@ struct H264DecoderState : public DecoderState {
     uint64_t dts = ~0ull;
     uint64_t pts_out = ~0ull;
 
+    // true means the output format is yuv420p3, false means it is yuv420p2
+    bool output_yuvp3;
+
     bool is_stopped = true;
 
     static uint32_t buffer_size(DecoderSize size);
@@ -112,6 +113,7 @@ struct H264DecoderState : public DecoderState {
     void set_res(const uint32_t width, const uint32_t height);
     void get_res(uint32_t &width, uint32_t &height);
     void get_pts(uint32_t &upper, uint32_t &lower);
+    void set_output_format(bool is_yuv_p3);
 
     H264DecoderState(uint32_t width, uint32_t height);
     ~H264DecoderState() override;
@@ -202,7 +204,7 @@ public:
     bool receive(uint8_t *data, DecoderSize *size) override;
 
     explicit PCMDecoderState(const float dest_frequency);
-    ~PCMDecoderState();
+    ~PCMDecoderState() override;
 };
 
 struct AacDecoderState : public DecoderState {
@@ -217,7 +219,7 @@ struct AacDecoderState : public DecoderState {
     uint32_t get_es_size() override;
 
     explicit AacDecoderState(uint32_t sample_rate, uint32_t channels);
-    ~AacDecoderState();
+    ~AacDecoderState() override;
 };
 
 struct PlayerState {
@@ -261,5 +263,5 @@ struct PlayerState {
 void convert_rgb_to_yuv(const uint8_t *rgba, uint8_t *yuv, uint32_t width, uint32_t height, const DecoderColorSpace color_space, int32_t inPitch);
 void convert_yuv_to_rgb(const uint8_t *yuv, uint8_t *rgba, uint32_t width, uint32_t height, const DecoderColorSpace color_space);
 int convert_yuv_to_jpeg(const uint8_t *yuv, uint8_t *jpeg, uint32_t width, uint32_t height, uint32_t max_size, const DecoderColorSpace color_space, int32_t compress_ratio);
-void copy_yuv_data_from_frame(AVFrame *frame, uint8_t *dest, const uint32_t width, const uint32_t height);
+void copy_yuv_data_from_frame(AVFrame *frame, uint8_t *dest, const uint32_t width, const uint32_t height, bool is_p3);
 std::string codec_error_name(int error);

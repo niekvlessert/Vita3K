@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -52,9 +52,7 @@ struct SceNpDrmLicense {
     uint8_t rsa_signature[0x100]; // 0x100
 };
 
-static SceNpDrmLicense license_buf;
-
-static bool open_license(EmuEnvState &emuenv, const fs::path &license_path) {
+static bool open_license(const fs::path &license_path, SceNpDrmLicense &license_buf) {
     memset(&license_buf, 0, sizeof(SceNpDrmLicense));
     fs::ifstream license(license_path, std::ios::in | std::ios::binary);
     if (license.is_open()) {
@@ -67,25 +65,25 @@ static bool open_license(EmuEnvState &emuenv, const fs::path &license_path) {
 }
 
 bool copy_license(EmuEnvState &emuenv, const fs::path &license_path) {
-    if (open_license(emuenv, license_path)) {
+    SceNpDrmLicense license_buf;
+    if (open_license(license_path, license_buf)) {
         emuenv.license_content_id = license_buf.content_id;
         emuenv.license_title_id = emuenv.license_content_id.substr(7, 9);
         const auto dst_path{ emuenv.pref_path / "ux0/license" / emuenv.license_title_id };
-        if (!fs::exists(dst_path))
-            fs::create_directories(dst_path);
+        fs::create_directories(dst_path);
 
         const auto license_dst_path{ dst_path / fmt::format("{}.rif", emuenv.license_content_id) };
         if (license_path != license_dst_path) {
             fs::copy_file(license_path, license_dst_path, fs::copy_options::overwrite_existing);
             if (fs::exists(license_dst_path)) {
-                LOG_INFO("Success copy license file to: {}", license_dst_path.string());
+                LOG_INFO("Success copy license file to: {}", license_dst_path);
                 return true;
             } else
-                LOG_ERROR("Fail copy license file to: {}", license_dst_path.string());
+                LOG_ERROR("Fail copy license file to: {}", license_dst_path);
         } else
-            LOG_ERROR("Source and destination license is same at: {}", license_path.string());
+            LOG_ERROR("Source and destination license is same at: {}", license_path);
     } else
-        LOG_ERROR("License file is corrupted at: {}", license_path.string());
+        LOG_ERROR("License file is corrupted at: {}", license_path);
 
     return false;
 }
@@ -94,7 +92,8 @@ int32_t get_license_sku_flag(EmuEnvState &emuenv, const std::string &content_id)
     int32_t sku_flag;
     const auto title_id = content_id.substr(7, 9);
     const auto license_path{ emuenv.pref_path / "ux0/license" / title_id / fmt::format("{}.rif", content_id) };
-    if (open_license(emuenv, license_path)) {
+    SceNpDrmLicense license_buf;
+    if (open_license(license_path, license_buf)) {
         sku_flag = byte_swap(license_buf.sku_flag);
     } else {
         const auto RETAIL_APP_PATH{ emuenv.pref_path / "ux0/app" / title_id / "sce_sys/retail/livearea" };
@@ -104,7 +103,7 @@ int32_t get_license_sku_flag(EmuEnvState &emuenv, const std::string &content_id)
             sku_flag = 0;
         if (fs::exists(license_path)) {
             fs::remove(license_path);
-            LOG_WARN("License file is corrupted at: {}, using default value.", license_path.string());
+            LOG_WARN("License file is corrupted at: {}, using default value.", license_path);
         }
     }
 
@@ -112,13 +111,13 @@ int32_t get_license_sku_flag(EmuEnvState &emuenv, const std::string &content_id)
 }
 
 bool create_license(EmuEnvState &emuenv, const std::string &zRIF) {
-    if (!fs::exists(emuenv.cache_path))
-        fs::create_directories(emuenv.cache_path);
+    fs::create_directories(emuenv.cache_path);
 
     // Create temp license file
     const auto temp_license_path = emuenv.cache_path / "temp_licence.rif";
-    std::ofstream temp_file(temp_license_path.string(), std::ios::out | std::ios::binary);
+    fs::ofstream temp_file(temp_license_path, std::ios::out | std::ios::binary);
     zrif2rif(zRIF, temp_file);
-
-    return copy_license(emuenv, temp_license_path);
+    auto res = copy_license(emuenv, temp_license_path);
+    fs::remove(temp_license_path);
+    return res;
 }

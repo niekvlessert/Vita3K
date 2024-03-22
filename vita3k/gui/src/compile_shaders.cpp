@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -79,7 +79,7 @@ void set_shaders_compiled_display(GuiState &gui, EmuEnvState &emuenv) {
         gui.shaders_compiled_display_time = time;
         emuenv.renderer->shaders_count_compiled = 0;
     } else if (gui.shaders_compiled_display_count > 0) {
-        // Display shaders compliled count during 3 sec
+        // Display shaders compiled count during 3 sec
         if ((gui.shaders_compiled_display_time + 3) <= time)
             gui.shaders_compiled_display_count = 0;
     }

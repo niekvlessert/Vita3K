@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -67,12 +67,13 @@ enum PerfomanceOverleyPosition {
     code(std::string, "backend-renderer", "OpenGL", backend_renderer)                                   \
     code(int, "gpu-idx", 0, gpu_idx)                                                                    \
     code(bool, "high-accuracy", true, high_accuracy)                                                    \
-    code(int, "resolution-multiplier", 1, resolution_multiplier)                                        \
+    code(float, "resolution-multiplier", 1.0f, resolution_multiplier)                                   \
     code(bool, "disable-surface-sync", true, disable_surface_sync)                                      \
     code(std::string, "screen-filter", "Bilinear", screen_filter)                                       \
     code(bool, "v-sync", true, v_sync)                                                                  \
     code(int, "anisotropic-filtering", 1, anisotropic_filtering)                                        \
     code(bool, "texture-cache", true, texture_cache)                                                    \
+    code(bool, "async-pipeline-compilation", true, async_pipeline_compilation)                          \
     code(bool, "show-compile-shaders", true, show_compile_shaders)                                      \
     code(bool, "hashless-texture-cache", false, hashless_texture_cache)                                 \
     code(bool, "import-textures", false, import_textures)                                               \
@@ -80,6 +81,7 @@ enum PerfomanceOverleyPosition {
     code(bool, "export-as-png", true, export_as_png)                                                    \
     code(bool, "boot-apps-full-screen", false, boot_apps_full_screen)                                   \
     code(std::string, "audio-backend", "SDL", audio_backend)                                            \
+    code(int, "audio-volume", 100, audio_volume)                                                        \
     code(bool, "ngs-enable", true, ngs_enable)                                                          \
     code(int, "sys-button", static_cast<int>(SCE_SYSTEM_PARAM_ENTER_BUTTON_CROSS), sys_button)          \
     code(int, "sys-lang", static_cast<int>(SCE_SYSTEM_PARAM_LANG_ENGLISH_US), sys_lang)                 \
@@ -130,6 +132,7 @@ enum PerfomanceOverleyPosition {
     code(int, "keyboard-gui-fullscreen", 68, keyboard_gui_fullscreen)                                   \
     code(int, "keyboard-gui-toggle-touch", 23, keyboard_gui_toggle_touch)                               \
     code(int, "keyboard-toggle-texture-replacement", 0, keyboard_toggle_texture_replacement)            \
+    code(int, "keyboard-take-screenshot", 0, keyboard_take_screenshot)                                  \
     code(std::string, "user-id", std::string{}, user_id)                                                \
     code(bool, "user-auto-connect", false, auto_user_login)                                             \
     code(std::string, "user-lang", std::string{}, user_lang)                                            \
@@ -139,6 +142,7 @@ enum PerfomanceOverleyPosition {
     code(bool, "asia-font-support", false, asia_font_support)                                           \
     code(bool, "shader-cache", true, shader_cache)                                                      \
     code(bool, "spirv-shader", false, spirv_shader)                                                     \
+    code(bool, "fps-hack", false, fps_hack)                                                             \
     code(uint64_t, "current-ime-lang", 4, current_ime_lang)                                             \
     code(int, "psn-signed-in", false, psn_signed_in)                                                    \
     code(bool, "http-enable", true, http_enable)                                                        \

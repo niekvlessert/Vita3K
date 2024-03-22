@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -59,40 +59,23 @@ bool does_write_to_predicate(const std::uint64_t inst, std::uint8_t &pred) {
 
 std::uint8_t get_predicate(const std::uint64_t inst) {
     switch (inst >> 59) {
-    // Special instructions
-    case 0b11111: {
-        if ((((inst >> 32) & ~0xFF8FFFFF) >> 20) == 0) {
-            break;
-        }
+    // VMAD2
+    case 0b00000:
+        return ((inst >> 32) & ~0xFCFFFFFF) >> 24;
 
-        // Kill
-        if ((((inst >> 32) & ~0xF8FFFFFF) >> 24) == 1 && ((inst >> 32) & ~0xFFCFFFFF) >> 20 == 3) {
-            uint8_t pred = ((inst >> 32) & (~0xFFFFF9FF)) >> 9;
-            switch (pred) {
-            case 0:
-                return static_cast<uint8_t>(ExtPredicate::NONE);
-            case 1:
-                return static_cast<uint8_t>(ExtPredicate::NEGP0);
-            case 2:
-                return static_cast<uint8_t>(ExtPredicate::NEGP1);
-            case 3:
-                return static_cast<uint8_t>(ExtPredicate::P0);
-            default:
-                return 0;
-            }
-        }
-
-        // Load immediate
-        if (((((inst >> 32) & ~0xF8FFFFFF) >> 24) == 4) && (((inst >> 32) & ~0xFFCFFFFF) >> 20 == 2)) {
-            return (((inst >> 32) & ~0xFFFFF1FF) >> 9);
-        }
-
-        return 0;
+    // V32NMAD, V16NMAD, VMAD
+    case 0b00001:
+    case 0b00010:
+    case 0b00011: {
+        uint8_t predicate = ((inst >> 32) & ~0xF8FFFFFFU) >> 24;
+        return static_cast<uint8_t>(ext_vec_predicate_to_ext(static_cast<ExtVecPredicate>(predicate)));
     }
+
     // VMAD normal version, predicates only occupied two bits
     case 0b00100:
     case 0b00101: {
         uint8_t predicate = ((inst >> 32) & ~0xFCFFFFFF) >> 24;
+        // short vector predicate
         switch (predicate) {
         case 0:
             return static_cast<uint8_t>(ExtPredicate::NONE);
@@ -106,27 +89,66 @@ std::uint8_t get_predicate(const std::uint64_t inst) {
             return 0;
         }
     }
-    // SOP2, I32MAD
+
+    // SOP2, SOP2M, SOP3, I8MAD, I16MAD, I32MAD
     case 0b10000:
-    case 0b10101:
-    case 0b10011: {
+    case 0b10001:
+    case 0b10010:
+    case 0b10011:
+    case 0b10100:
+    case 0b10101: {
         uint8_t predicate = ((inst >> 32) & ~0xF9FFFFFF) >> 25;
         return static_cast<uint8_t>(short_predicate_to_ext(static_cast<ShortPredicate>(predicate)));
     }
-    // V16NMAD, V32NMAD, VMAD, VDP
-    case 0b00011:
-    case 0b00010:
-    case 0b00001: {
-        uint8_t predicate = ((inst >> 32) & ~0xF8FFFFFFU) >> 24;
-        return static_cast<uint8_t>(ext_vec_predicate_to_ext(static_cast<ExtVecPredicate>(predicate)));
+
+    // Special instructions
+    case 0b11111: {
+        const uint8_t opcat = (inst >> (32 + 20)) & 0b11;
+        const uint8_t opcat_extra = (inst >> (32 + 22)) & 0b1;
+        if (opcat == 0) {
+            if (opcat_extra == 0)
+                // BR
+                break;
+            else
+                // PHAS
+                return 0;
+        }
+
+        const uint8_t op2 = (inst >> (32 + 24)) & 0b111;
+
+        if (opcat == 0b11 && op2 == 0b001) {
+            // KILL
+            uint8_t pred = ((inst >> 32) & (~0xFFFFF9FF)) >> 9;
+            // note: this is the opposite of the short predicate when there is a predicate
+            switch (pred) {
+            case 0:
+                return static_cast<uint8_t>(ExtPredicate::NONE);
+            case 1:
+                return static_cast<uint8_t>(ExtPredicate::NEGP0);
+            case 2:
+                return static_cast<uint8_t>(ExtPredicate::NEGP1);
+            case 3:
+                return static_cast<uint8_t>(ExtPredicate::P0);
+            default:
+                return 0;
+            }
+        } else if (opcat == 0b10 && op2 == 0b100) {
+            // LIMM
+            return (((inst >> 32) & ~0xFFFFF1FF) >> 9);
+        } else if (opcat == 0b11 && op2 == 0b011) {
+            // DEPTHF
+            uint8_t predicate = ((inst >> 32) & ~0xFFFFF9FFU) >> 9;
+            return static_cast<uint8_t>(short_predicate_to_ext(static_cast<ShortPredicate>(predicate)));
+        }
+
+        return 0;
     }
-    case 0b00000:
-        return ((inst >> 32) & ~0xFCFFFFFF) >> 24;
 
     default:
         break;
     }
 
+    // most common predicate location
     return ((inst >> 32) & ~0xF8FFFFFFU) >> 24;
 }
 
@@ -172,16 +194,15 @@ int get_uniform_buffer_sizes(const SceGxmProgram &program, UniformBufferSizes &s
 }
 
 void get_attribute_informations(const SceGxmProgram &program, AttributeInformationMap &locmap) {
-    const SceGxmProgramParameter *const gxp_parameters = gxp::program_parameters(program);
+    const SceGxmProgramParameter *const gxp_parameters = program.program_parameters();
     std::uint32_t fcount_allocated = 0;
     const auto vertex_varyings_ptr = program.vertex_varyings();
 
     for (size_t i = 0; i < program.parameter_count; ++i) {
         const SceGxmProgramParameter &parameter = gxp_parameters[i];
         if (parameter.category == SCE_GXM_PARAMETER_CATEGORY_ATTRIBUTE) {
-            const SceGxmParameterType parameter_type = gxp::parameter_type(parameter);
             bool is_integer;
-            switch (parameter_type) {
+            switch (parameter.type) {
             case SCE_GXM_PARAMETER_TYPE_C10:
             case SCE_GXM_PARAMETER_TYPE_F16:
             case SCE_GXM_PARAMETER_TYPE_F32:
@@ -193,18 +214,19 @@ void get_attribute_informations(const SceGxmProgram &program, AttributeInformati
             }
 
             bool is_signed;
-            switch (parameter_type) {
+            switch (parameter.type) {
             case SCE_GXM_PARAMETER_TYPE_S8:
             case SCE_GXM_PARAMETER_TYPE_S16:
             case SCE_GXM_PARAMETER_TYPE_S32:
                 is_signed = true;
+                break;
             default:
                 is_signed = false;
+                break;
             }
 
             bool regformat = (vertex_varyings_ptr->untyped_pa_regs & ((uint64_t)1 << parameter.resource_index)) != 0;
-
-            locmap.emplace(parameter.resource_index, AttributeInformation(fcount_allocated / 4, parameter.type, is_integer, is_signed, regformat));
+            locmap.emplace(parameter.resource_index, AttributeInformation(fcount_allocated / 4, parameter.type, parameter.component_count, is_integer, is_signed, regformat));
             fcount_allocated += ((parameter.array_size * parameter.component_count + 3) / 4) * 4;
         }
     }
@@ -278,7 +300,7 @@ void USSELoopNode::set_content_block(USSEBaseNodeInstance &node) {
     children[0] = std::move(node);
 }
 
-void analyze(USSEBlockNode &root, USSEOffset end_offset, AnalyzeReadFunction read_func) {
+void analyze(USSEBlockNode &root, USSEOffset end_offset, const AnalyzeReadFunction &read_func) {
     struct BlockInvestigateRequest {
         USSEOffset begin_offset;
         USSEOffset end_offset;
@@ -425,7 +447,7 @@ void analyze(USSEBlockNode &root, USSEOffset end_offset, AnalyzeReadFunction rea
                                 auto end_ite = branches_from.lower_bound(branch_from_result->second.dest - 1);
 
                                 if ((begin_ite != branches_from.end()) && (end_ite != branches_from.end())) {
-                                    for (; begin_ite != end_ite; begin_ite++) {
+                                    for (; begin_ite != end_ite; ++begin_ite) {
                                         if (begin_ite->second.dest > branch_from_result->second.dest) {
                                             else_exist = true;
                                             else_end_offset = begin_ite->second.dest;
@@ -475,7 +497,7 @@ void analyze(USSEBlockNode &root, USSEOffset end_offset, AnalyzeReadFunction rea
             } else if (branches_to_back.contains(baddr) && (request.block_node->start_offset() != baddr)) {
                 // The loop continue target should be unconditional and farest
                 std::uint32_t found_offset = 0xFFFFFFFF;
-                for (auto ite = branch_to_result.first; ite != branch_to_result.second; ite++) {
+                for (auto ite = branch_to_result.first; ite != branch_to_result.second; ++ite) {
                     if ((ite->second.pred == 0) && ((found_offset == 0xFFFFFFFF) || (found_offset < ite->second.offset))) {
                         found_offset = ite->second.offset;
                     }

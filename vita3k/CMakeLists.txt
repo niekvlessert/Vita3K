@@ -1,8 +1,8 @@
 set(VITA3K_ORG_NAME "Vita3K")
 set(VITA3K_APP_NAME "Vita3K")
 set(VITA3K_APP_VER_HI 0)
-set(VITA3K_APP_VER_MID 1)
-set(VITA3K_APP_VER_LO 9)
+set(VITA3K_APP_VER_MID 2)
+set(VITA3K_APP_VER_LO 0)
 set(VITA3K_APP_VERSION "v${VITA3K_APP_VER_HI}.${VITA3K_APP_VER_MID}.${VITA3K_APP_VER_LO}")
 
 execute_process(
@@ -94,7 +94,6 @@ add_subdirectory(app)
 add_subdirectory(audio)
 add_subdirectory(config)
 add_subdirectory(cpu)
-add_subdirectory(crypto)
 add_subdirectory(ctrl)
 add_subdirectory(codec)
 add_subdirectory(compat)
@@ -132,7 +131,7 @@ add_subdirectory(vkutil)
 
 add_executable(vita3k MACOSX_BUNDLE main.cpp interface.cpp interface.h performance.cpp)
 
-target_link_libraries(vita3k PRIVATE app config ctrl display gdbstub gui gxm io miniz modules packages renderer shader touch)
+target_link_libraries(vita3k PRIVATE app config cppcommon ctrl display gdbstub gui gxm io miniz modules packages renderer shader touch)
 if(USE_DISCORD_RICH_PRESENCE)
 	target_link_libraries(vita3k PRIVATE discord-rpc)
 endif()
@@ -275,8 +274,8 @@ elseif(WIN32)
 		add_custom_command(
 		TARGET vita3k
 		POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/external/openssl/openssl-3/x64/bin/libssl-3-x64.dll" "$<TARGET_FILE_DIR:vita3k>"
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/external/openssl/openssl-3/x64/bin/libcrypto-3-x64.dll" "$<TARGET_FILE_DIR:vita3k>")
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/external/openssl/openssl-3.1/x64/bin/libssl-3-x64.dll" "$<TARGET_FILE_DIR:vita3k>"
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/external/openssl/openssl-3.1/x64/bin/libcrypto-3-x64.dll" "$<TARGET_FILE_DIR:vita3k>")
 	endif()
 endif()
 

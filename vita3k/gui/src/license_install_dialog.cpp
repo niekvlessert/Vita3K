@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 #include <host/dialog/filesystem.hpp>
 #include <misc/cpp/imgui_stdlib.h>
 #include <packages/functions.h>
-#include <util/string_utils.h>
 
 namespace gui {
 
@@ -70,7 +69,7 @@ void draw_license_install_dialog(GuiState &gui, EmuEnvState &emuenv) {
         host::dialog::filesystem::Result result = host::dialog::filesystem::Result::CANCEL;
         result = host::dialog::filesystem::open_file(license_path, { { "PlayStation Vita software license file", { "bin", "rif" } } });
         if (result == host::dialog::filesystem::Result::SUCCESS) {
-            if (copy_license(emuenv, fs::path(license_path.wstring())))
+            if (copy_license(emuenv, fs::path(license_path.native())))
                 state = "success";
             else
                 state = "fail";
@@ -114,10 +113,10 @@ void draw_license_install_dialog(GuiState &gui, EmuEnvState &emuenv) {
         ImGui::SetCursorPos(ImVec2(POS_BUTTON, ImGui::GetWindowSize().y - BUTTON_SIZE.y - (20.f * SCALE.y)));
         if (ImGui::Button(common["ok"].c_str(), BUTTON_SIZE)) {
             if (delete_license_file) {
-                fs::remove(fs::path(license_path.wstring()));
+                fs::remove(fs::path(license_path.native()));
                 delete_license_file = false;
             }
-            license_path = nullptr;
+            license_path = "";
             gui.file_menu.license_install_dialog = false;
             state.clear();
         }
@@ -129,7 +128,7 @@ void draw_license_install_dialog(GuiState &gui, EmuEnvState &emuenv) {
         ImGui::SetCursorPos(ImVec2(POS_BUTTON, ImGui::GetWindowSize().y - BUTTON_SIZE.y - (20.f * SCALE.y)));
         if (ImGui::Button(common["ok"].c_str(), BUTTON_SIZE)) {
             gui.file_menu.license_install_dialog = false;
-            license_path = nullptr;
+            license_path = "";
             state.clear();
         }
     }

@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include <crypto/hash.h>
 #include <glutil/object.h>
 #include <glutil/object_array.h>
 #include <gxm/types.h>
@@ -25,6 +24,7 @@
 #include <renderer/gxm_types.h>
 #include <shader/spirv_recompiler.h>
 #include <shader/usse_program_analyzer.h>
+#include <util/hash.h>
 
 #include <array>
 #include <bit>
@@ -55,8 +55,6 @@ struct UniformSetRequest {
     const SceGxmProgramParameter *parameter;
     const void *data;
 };
-
-struct CommandBuffer;
 
 enum class Backend : uint32_t {
     OpenGL,
@@ -141,8 +139,8 @@ struct GxmRecordState {
     std::array<GXMStreamInfo, SCE_GXM_MAX_VERTEX_STREAMS> vertex_streams;
 
     // Programs.
-    Ptr<const SceGxmFragmentProgram> fragment_program;
-    Ptr<const SceGxmVertexProgram> vertex_program;
+    Ptr<SceGxmFragmentProgram> fragment_program;
+    Ptr<SceGxmVertexProgram> vertex_program;
 
     SceGxmColorSurface color_surface;
     SceGxmDepthStencilSurface depth_stencil_surface;
@@ -205,8 +203,6 @@ struct FragmentProgram : ShaderProgram {
 
 struct VertexProgram : ShaderProgram {
     shader::usse::AttributeInformationMap attribute_infos;
-
-    bool stripped_symbols_checked;
 };
 
 struct ShadersHash {

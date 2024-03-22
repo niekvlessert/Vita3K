@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -109,9 +109,7 @@ static void hash_unaligned_tiled(const uint8_t *data, uint32_t width, uint32_t h
     constexpr uint32_t tile_mask = 0x1F;
 
     const uint32_t width_down_aligned = align_down(width, 32);
-    const uint32_t width_aligned = align(width, 32);
     const uint32_t height_down_aligned = align_down(height, 32);
-    const uint32_t height_aligned = align(height, 32);
 
     // we need to take blocks into account, so consider a block line as
     // a 32xblock_height rectangle of pixels
@@ -336,7 +334,6 @@ void TextureCache::upload_texture(const SceGxmTexture &gxm_texture, MemState &me
         return;
     }
 
-    const bool is_block_compressed = gxm::is_block_compressed_format(base_format);
     uint32_t width = gxm::get_width(gxm_texture);
     uint32_t height = gxm::get_height(gxm_texture);
 
@@ -358,14 +355,11 @@ void TextureCache::upload_texture(const SceGxmTexture &gxm_texture, MemState &me
 
     const auto texture_type = gxm_texture.texture_type();
     const bool is_swizzled = (texture_type == SCE_GXM_TEXTURE_SWIZZLED) || (texture_type == SCE_GXM_TEXTURE_CUBE) || (texture_type == SCE_GXM_TEXTURE_SWIZZLED_ARBITRARY) || (texture_type == SCE_GXM_TEXTURE_CUBE_ARBITRARY);
-    // swizzled bcn textures
-    const bool need_block_unswizzle = is_swizzled && gxm::is_bcn_format(base_format);
 
     uint32_t mip_index = 0;
     uint32_t total_mip = get_upload_mip(gxm_texture.true_mip_count(), width, height);
     uint32_t face_uploaded_count = 0;
     uint32_t face_total_count;
-    uint32_t source_size = 0;
     uint32_t total_source_so_far = 0;
 
     // Modified during decompression
@@ -453,10 +447,10 @@ void TextureCache::upload_texture(const SceGxmTexture &gxm_texture, MemState &me
             texture_data_decompressed.resize(pixels_per_stride * memory_height * 4);
             if (base_format == SCE_GXM_TEXTURE_BASE_FORMAT_P8) {
                 palette_texture_to_rgba_8(reinterpret_cast<uint32_t *>(texture_data_decompressed.data()),
-                    reinterpret_cast<const uint8_t *>(pixels), pixels_per_stride, memory_height, get_texture_palette(gxm_texture, mem));
+                    static_cast<const uint8_t *>(pixels), pixels_per_stride, memory_height, get_texture_palette(gxm_texture, mem));
             } else {
                 palette_texture_to_rgba_4(reinterpret_cast<uint32_t *>(texture_data_decompressed.data()),
-                    reinterpret_cast<const uint8_t *>(pixels), pixels_per_stride, memory_height, get_texture_palette(gxm_texture, mem));
+                    static_cast<const uint8_t *>(pixels), pixels_per_stride, memory_height, get_texture_palette(gxm_texture, mem));
             }
             pixels = texture_data_decompressed.data();
             bytes_per_pixel = 4;
@@ -472,7 +466,7 @@ void TextureCache::upload_texture(const SceGxmTexture &gxm_texture, MemState &me
 
             texture_data_decompressed.resize(pixels_per_stride * memory_height * 4);
             // this actually also unswizzles the texture
-            source_size = decompress_compressed_texture(base_format, texture_data_decompressed.data(), pixels, pixels_per_stride, memory_height);
+            decompress_compressed_texture(base_format, texture_data_decompressed.data(), pixels, pixels_per_stride, memory_height);
             bytes_per_pixel = 4;
             bpp = 32;
             upload_format = SCE_GXM_TEXTURE_BASE_FORMAT_U8U8U8U8;
@@ -524,15 +518,12 @@ void TextureCache::upload_texture(const SceGxmTexture &gxm_texture, MemState &me
             pixels = texture_data_decompressed.data();
             upload_format = SCE_GXM_TEXTURE_BASE_FORMAT_F32;
             break;
-        // TODO: we are decoding YUV420P2 as YUV420P3, that's completely wrong...
-        // The reason I do not put an error message instead is because the video decoder
-        // is always outputting YUV420P2 frames (instead of what is asked by the user...)
-        // so this works in this case but that needs to be fixed
         case SCE_GXM_TEXTURE_BASE_FORMAT_YUV420P2:
         case SCE_GXM_TEXTURE_BASE_FORMAT_YUV420P3:
             texture_data_decompressed.resize(pixels_per_stride * memory_height * 4);
-            yuv420P3_texture_to_rgb(texture_data_decompressed.data(),
-                reinterpret_cast<const uint8_t *>(pixels), pixels_per_stride, memory_height, layout_width, layout_height);
+            yuv420_texture_to_rgb(texture_data_decompressed.data(),
+                static_cast<const uint8_t *>(pixels), pixels_per_stride, memory_height, layout_width, layout_height,
+                base_format == SCE_GXM_TEXTURE_BASE_FORMAT_YUV420P3);
             pixels = texture_data_decompressed.data();
             bpp = 32;
             upload_format = SCE_GXM_TEXTURE_BASE_FORMAT_U8U8U8U8;
@@ -549,10 +540,10 @@ void TextureCache::upload_texture(const SceGxmTexture &gxm_texture, MemState &me
                 // just unswizzle the blocks
                 resolve_z_order_compressed_texture(base_format, texture_pixels_lineared.data(), pixels, pixels_per_stride, memory_height);
             else if (is_swizzled)
-                swizzled_texture_to_linear_texture(texture_pixels_lineared.data(), reinterpret_cast<const uint8_t *>(pixels), pixels_per_stride, memory_height,
+                swizzled_texture_to_linear_texture(texture_pixels_lineared.data(), static_cast<const uint8_t *>(pixels), pixels_per_stride, memory_height,
                     static_cast<std::uint8_t>(bpp));
             else
-                tiled_texture_to_linear_texture(texture_pixels_lineared.data(), reinterpret_cast<const uint8_t *>(pixels), pixels_per_stride, memory_height,
+                tiled_texture_to_linear_texture(texture_pixels_lineared.data(), static_cast<const uint8_t *>(pixels), pixels_per_stride, memory_height,
                     static_cast<std::uint8_t>(bpp));
 
             pixels = texture_pixels_lineared.data();

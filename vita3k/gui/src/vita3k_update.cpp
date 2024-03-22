@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -81,8 +81,8 @@ bool init_vita3k_update(GuiState &gui) {
             std::vector<std::pair<uint32_t, uint32_t>> page_count;
             for (int32_t i = 0; i < dif_from_current; i += 100) {
                 const auto page = i / 100 + 1;
-                const auto per_page = std::min(dif_from_current - i, int32_t(100));
-                page_count.push_back({ page, per_page });
+                const auto per_page = std::min<int32_t>(dif_from_current - i, 100);
+                page_count.emplace_back(page, per_page);
             }
 
             // Browse all page
@@ -101,7 +101,7 @@ bool init_vita3k_update(GuiState &gui) {
                     boost::replace_all(commits, "\\\"", "&quot;");
 
                     // Using regex to get sha, author and message from commits
-                    const std::regex commit_regex("\"sha\":\"([a-f0-9]{40})\".*?\"author\":\\{\"name\":\"([^\"]+)\".*?\"message\":\"([^\"]+)\"");
+                    const std::regex commit_regex(R"lit("sha":"([a-f0-9]{40})".*?"author":\{"name":"([^"]+)".*?"message":"([^"]+)")lit");
                     while (std::regex_search(commits, match, commit_regex)) {
                         // Get sha and message from regex match result
                         sha = match[1];
@@ -148,7 +148,7 @@ static std::atomic<float> progress(0);
 static std::atomic<uint64_t> remaining(0);
 static net_utils::ProgressState progress_state{};
 
-static void download_update(const std::string &base_path) {
+static void download_update(const fs::path &base_path) {
     progress_state.download = true;
     progress_state.pause = false;
     std::thread download([base_path]() {
@@ -167,7 +167,7 @@ static void download_update(const std::string &base_path) {
         const std::string archive_ext = ".zip";
 #endif
 
-        const auto vita3k_latest_path = base_path + "vita3k-latest" + archive_ext;
+        const auto vita3k_latest_path = base_path / ("vita3k-latest" + archive_ext);
 
         const std::string version = std::to_string(git_version);
 
@@ -180,7 +180,7 @@ static void download_update(const std::string &base_path) {
             return &progress_state;
         };
 
-        if (net_utils::download_file(download_continuous_link, vita3k_latest_path, progress_callback)) {
+        if (net_utils::download_file(download_continuous_link, fs_utils::path_to_utf8(vita3k_latest_path), progress_callback)) {
             SDL_Event event;
             event.type = SDL_QUIT;
             SDL_PushEvent(&event);

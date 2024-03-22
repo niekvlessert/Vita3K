@@ -1,5 +1,5 @@
 ﻿// Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -48,7 +48,9 @@ static std::map<std::string, Theme> themes_info;
 static std::vector<std::pair<std::string, time_t>> themes_list;
 
 static void get_themes_list(GuiState &gui, EmuEnvState &emuenv) {
-    gui.themes_preview.clear(), themes_info.clear(), themes_list.clear();
+    gui.themes_preview.clear();
+    themes_info.clear();
+    themes_list.clear();
 
     const auto theme_path{ emuenv.pref_path / "ux0/theme" };
     const auto fw_theme_path{ emuenv.pref_path / "vs0/data/internal/theme" };
@@ -86,16 +88,15 @@ static void get_themes_list(GuiState &gui, EmuEnvState &emuenv) {
     std::map<std::string, std::map<ThemePreviewType, std::string>> theme_preview_name;
     for (const auto &theme : fs::directory_iterator(theme_path)) {
         if (!theme.path().empty() && fs::is_directory(theme.path())) {
-            vfs::FileBuffer params;
-            const auto content_id_wstr = theme.path().filename().wstring();
-            const auto content_id = string_utils::wide_to_utf(content_id_wstr);
-            const auto theme_path_xml{ theme_path / content_id_wstr / "theme.xml" };
+            const auto content_id_path = theme.path().filename();
+            const auto content_id = fs_utils::path_to_utf8(content_id_path);
+            const auto theme_path_xml{ theme_path / content_id_path / "theme.xml" };
             pugi::xml_document doc;
 
             if (doc.load_file(theme_path_xml.c_str())) {
                 const auto infomation = doc.child("theme").child("InfomationProperty");
 
-                // Thumbmail theme
+                // Thumbnail theme
                 theme_preview_name[content_id][PACKAGE] = infomation.child("m_packageImageFilePath").text().as_string();
 
                 // Preview theme
@@ -121,16 +122,16 @@ static void get_themes_list(GuiState &gui, EmuEnvState &emuenv) {
                         return acc + fs::file_size(theme.path());
                     return acc;
                 };
-                const auto theme_content_ids = fs::recursive_directory_iterator(theme_path / content_id_wstr);
+                const auto theme_content_ids = fs::recursive_directory_iterator(theme_path / content_id_path);
                 const auto theme_size = std::accumulate(fs::begin(theme_content_ids), fs::end(theme_content_ids), boost::uintmax_t{}, pred);
 
-                const auto updated = fs::last_write_time(theme_path / content_id_wstr);
+                const auto updated = fs::last_write_time(theme_path / content_id_path);
                 SAFE_LOCALTIME(&updated, &themes_info[content_id].updated);
 
                 themes_info[content_id].size = theme_size / KiB(1);
                 themes_info[content_id].version = infomation.child("m_contentVer").text().as_string();
 
-                themes_list.push_back({ content_id, updated });
+                themes_list.emplace_back(content_id, updated);
             } else
                 LOG_ERROR("theme not found for title: {}", content_id);
         }
@@ -151,29 +152,29 @@ static void get_themes_list(GuiState &gui, EmuEnvState &emuenv) {
     } else
         LOG_WARN("Default theme not found, install firmware fix this!");
 
-    for (const auto &theme : themes_info) {
-        for (const auto &name : theme_preview_name[theme.first]) {
-            if (!name.second.empty()) {
+    for (const auto &[content_id, theme] : themes_info) {
+        for (const auto &[preview_type, theme_name] : theme_preview_name[content_id]) {
+            if (!theme_name.empty()) {
                 int32_t width = 0;
                 int32_t height = 0;
                 vfs::FileBuffer buffer;
 
-                if (theme.first == "default")
-                    vfs::read_file(VitaIoDevice::vs0, buffer, emuenv.pref_path.wstring(), name.second);
+                if (content_id == "default")
+                    vfs::read_file(VitaIoDevice::vs0, buffer, emuenv.pref_path, theme_name);
                 else
-                    vfs::read_file(VitaIoDevice::ux0, buffer, emuenv.pref_path.wstring(), fs::path("theme") / string_utils::utf_to_wide(theme.first) / name.second);
+                    vfs::read_file(VitaIoDevice::ux0, buffer, emuenv.pref_path, fs::path("theme") / fs_utils::utf8_to_path(content_id) / theme_name);
 
                 if (buffer.empty()) {
-                    LOG_WARN("Background, Name: '{}', Not found for title: {} [{}].", name.second, theme.first, theme.second.title);
+                    LOG_WARN("Background, Name: '{}', Not found for title: {} [{}].", theme_name, content_id, theme.title);
                     continue;
                 }
                 stbi_uc *data = stbi_load_from_memory(&buffer[0], static_cast<int>(buffer.size()), &width, &height, nullptr, STBI_rgb_alpha);
                 if (!data) {
-                    LOG_ERROR("Invalid Background for title: {} [{}].", theme.first, theme.second.title);
+                    LOG_ERROR("Invalid Background for title: {} [{}].", content_id, theme.title);
                     continue;
                 }
 
-                gui.themes_preview[theme.first][name.first].init(gui.imgui_state.get(), data, width, height);
+                gui.themes_preview[content_id][preview_type].init(gui.imgui_state.get(), data, width, height);
                 stbi_image_free(data);
             }
         }
@@ -464,7 +465,7 @@ void draw_settings(GuiState &gui, EmuEnvState &emuenv) {
                                 save_user(gui, emuenv, emuenv.io.user_id);
                                 init_theme_start_background(gui, emuenv, "default");
                             }
-                            fs::remove_all(emuenv.pref_path / "ux0/theme" / string_utils::utf_to_wide(selected));
+                            fs::remove_all(emuenv.pref_path / "ux0/theme" / fs_utils::utf8_to_path(selected));
                             if (emuenv.app_path == "NPXS10026")
                                 init_content_manager(gui, emuenv);
                             delete_theme = selected;
@@ -603,8 +604,8 @@ void draw_settings(GuiState &gui, EmuEnvState &emuenv) {
                         std::filesystem::path image_path = "";
                         host::dialog::filesystem::Result result = host::dialog::filesystem::open_file(image_path, { { "Image file", { "bmp", "gif", "jpg", "png", "tif" } } });
 
-                        if ((result == host::dialog::filesystem::Result::SUCCESS) && init_user_start_background(gui, image_path.string())) {
-                            gui.users[emuenv.io.user_id].start_path = image_path.string();
+                        if ((result == host::dialog::filesystem::Result::SUCCESS) && init_user_start_background(gui, fs_utils::path_to_utf8(image_path.native()))) {
+                            gui.users[emuenv.io.user_id].start_path = fs_utils::path_to_utf8(image_path.native());
                             gui.users[emuenv.io.user_id].start_type = "image";
                             save_user(gui, emuenv, emuenv.io.user_id);
                         }
@@ -633,8 +634,7 @@ void draw_settings(GuiState &gui, EmuEnvState &emuenv) {
 
                 // Delete user background
                 if (!delete_user_background.empty()) {
-                    const auto bg = std::find(gui.users[emuenv.io.user_id].backgrounds.begin(), gui.users[emuenv.io.user_id].backgrounds.end(), delete_user_background);
-                    gui.users[emuenv.io.user_id].backgrounds.erase(bg);
+                    vector_utils::erase_first(gui.users[emuenv.io.user_id].backgrounds, delete_user_background);
                     gui.user_backgrounds.erase(delete_user_background);
                     gui.user_backgrounds_infos.erase(delete_user_background);
                     if (!gui.users[emuenv.io.user_id].backgrounds.empty())
@@ -666,10 +666,10 @@ void draw_settings(GuiState &gui, EmuEnvState &emuenv) {
                 if (ImGui::Selectable(theme_background.home_screen_backgrounds["add_background"].c_str(), false, ImGuiSelectableFlags_None, SIZE_PACKAGE)) {
                     std::filesystem::path background_path = "";
                     host::dialog::filesystem::Result result = host::dialog::filesystem::open_file(background_path, { { "Image file", { "bmp", "gif", "jpg", "png", "tif" } } });
-
-                    if ((result == host::dialog::filesystem::Result::SUCCESS) && (!gui.user_backgrounds.contains(background_path.string()))) {
-                        if (init_user_background(gui, emuenv, background_path.string())) {
-                            gui.users[emuenv.io.user_id].backgrounds.push_back(background_path.string());
+                    auto background_path_string = fs_utils::path_to_utf8(background_path.native());
+                    if ((result == host::dialog::filesystem::Result::SUCCESS) && (!gui.user_backgrounds.contains(background_path_string))) {
+                        if (init_user_background(gui, emuenv, background_path_string)) {
+                            gui.users[emuenv.io.user_id].backgrounds.push_back(background_path_string);
                             gui.users[emuenv.io.user_id].use_theme_bg = false;
                             save_user(gui, emuenv, emuenv.io.user_id);
                         }
@@ -898,7 +898,7 @@ void draw_settings(GuiState &gui, EmuEnvState &emuenv) {
                         ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.f, 0.5f));
                         ImGui::PushID(lang.first);
                         ImGui::SetWindowFontScale(1.f);
-                        const auto is_lang_enable = std::find(emuenv.cfg.ime_langs.begin(), emuenv.cfg.ime_langs.end(), lang.first) != emuenv.cfg.ime_langs.end();
+                        const auto is_lang_enable = vector_utils::contains(emuenv.cfg.ime_langs, uint64_t(lang.first));
                         if (ImGui::Selectable(is_lang_enable ? "V" : "##lang", false, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0.f, SIZE_SELECT)))
                             selected = std::to_string(lang.first);
                         ImGui::NextColumn();
@@ -942,11 +942,11 @@ void draw_settings(GuiState &gui, EmuEnvState &emuenv) {
                             // Sort Ime lang in good order
                             if (emuenv.cfg.ime_langs.size() > 1) {
                                 std::vector<uint64_t> cfg_ime_langs_temp;
-                                for (const auto &lang : emuenv.ime.lang.ime_keyboards) {
-                                    if (std::find(emuenv.cfg.ime_langs.begin(), emuenv.cfg.ime_langs.end(), (uint64_t)lang.first) != emuenv.cfg.ime_langs.end())
-                                        cfg_ime_langs_temp.push_back(lang.first);
+                                for (const auto &[lang_id, _] : emuenv.ime.lang.ime_keyboards) {
+                                    if (vector_utils::contains(emuenv.cfg.ime_langs, (uint64_t)lang_id))
+                                        cfg_ime_langs_temp.push_back(lang_id);
                                 }
-                                emuenv.cfg.ime_langs = cfg_ime_langs_temp;
+                                emuenv.cfg.ime_langs = std::move(cfg_ime_langs_temp);
                             }
                         }
                         config::serialize_config(emuenv.cfg, emuenv.config_path);

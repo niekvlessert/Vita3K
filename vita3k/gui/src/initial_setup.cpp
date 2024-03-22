@@ -1,5 +1,5 @@
 ﻿// Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,8 +21,6 @@
 #include <gui/functions.h>
 #include <host/dialog/filesystem.hpp>
 #include <lang/functions.h>
-
-#include <util/string_utils.h>
 
 namespace gui {
 
@@ -168,9 +166,9 @@ void draw_initial_setup(GuiState &gui, EmuEnvState &emuenv) {
             std::filesystem::path emulator_path = "";
             host::dialog::filesystem::Result result = host::dialog::filesystem::pick_folder(emulator_path);
 
-            if ((result == host::dialog::filesystem::Result::SUCCESS) && (emulator_path.wstring() != emuenv.pref_path)) {
-                emuenv.pref_path = emulator_path.wstring() + L'/';
-                emuenv.cfg.pref_path = emulator_path.string();
+            if ((result == host::dialog::filesystem::Result::SUCCESS) && (emulator_path.native() != emuenv.pref_path.native())) {
+                emuenv.pref_path = fs::path(emulator_path.native()) / "";
+                emuenv.cfg.set_pref_path(emuenv.pref_path);
             } else if (result == host::dialog::filesystem::Result::ERROR) {
                 LOG_CRITICAL("Error initializing file dialog: {}", host::dialog::filesystem::get_error());
             }
@@ -180,7 +178,7 @@ void draw_initial_setup(GuiState &gui, EmuEnvState &emuenv) {
             if (ImGui::Button(lang["reset_emu_path"].c_str(), BIG_BUTTON_SIZE)) {
                 if (emuenv.default_path != emuenv.pref_path) {
                     emuenv.pref_path = emuenv.default_path;
-                    emuenv.cfg.pref_path = emuenv.default_path.string();
+                    emuenv.cfg.set_pref_path(emuenv.default_path);
                 }
             }
         }

@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,7 +20,10 @@
 #include <config/state.h>
 #include <config/version.h>
 #include <gui/functions.h>
+#include <include/cpu.h>
+#include <include/environment.h>
 #include <io/state.h>
+#include <renderer/state.h>
 
 #include <util/log.h>
 #include <util/safe_time.h>
@@ -44,7 +47,7 @@ static bool get_update_history(GuiState &gui, EmuEnvState &emuenv, const std::st
     std::string fname = fs::exists(change_info_path / fmt::format("changeinfo_{:0>2d}.xml", emuenv.cfg.sys_lang)) ? fmt::format("changeinfo_{:0>2d}.xml", emuenv.cfg.sys_lang) : "changeinfo.xml";
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_file((change_info_path.string() + fname).c_str());
+    pugi::xml_parse_result result = doc.load_file((change_info_path / fname).c_str());
 
     for (const auto &info : doc.child("changeinfo"))
         update_history_infos[info.attribute("app_ver").as_double()] = info.text().as_string();
@@ -155,7 +158,7 @@ void get_time_apps(GuiState &gui, EmuEnvState &emuenv) {
                 }
             }
         } else {
-            LOG_ERROR("Time XML found is corrupted on path: {}", time_path.string());
+            LOG_ERROR("Time XML found is corrupted on path: {}", time_path);
             fs::remove(time_path);
         }
     }
@@ -240,6 +243,9 @@ void delete_app(GuiState &gui, EmuEnvState &emuenv, const std::string &app_path)
         const auto SHADER_LOG_PATH{ emuenv.cache_path / "shaderlog" / title_id };
         if (fs::exists(SHADER_LOG_PATH))
             fs::remove_all(SHADER_LOG_PATH);
+        const auto SHADER_LOG_PATH_2{ emuenv.log_path / "shaderlog" / title_id };
+        if (fs::exists(SHADER_LOG_PATH_2))
+            fs::remove_all(SHADER_LOG_PATH_2);
         const auto EXPORT_TEXTURES_PATH{ emuenv.shared_path / "textures/export" / title_id };
         if (fs::exists(EXPORT_TEXTURES_PATH))
             fs::remove_all(EXPORT_TEXTURES_PATH);
@@ -260,7 +266,7 @@ void delete_app(GuiState &gui, EmuEnvState &emuenv, const std::string &app_path)
 
         LOG_INFO("Application successfully deleted '{} [{}]'.", title_id, APP_INDEX->title);
 
-        gui.app_selector.user_apps.erase(APP_INDEX);
+        gui.app_selector.user_apps.erase(gui.app_selector.user_apps.begin() + (APP_INDEX - &gui.app_selector.user_apps[0]));
 
         save_apps_cache(gui, emuenv);
     } catch (std::exception &e) {
@@ -369,7 +375,7 @@ void draw_app_context_menu(GuiState &gui, EmuEnvState &emuenv, const std::string
                         }
                     } else {
                         if (ImGui::MenuItem(lang.main["create_state_report"].c_str())) {
-                            // Create body of state repport
+                            // Create body of state report
 
                             // Encode title for URL
                             const auto encode_title_url = [](std::string title) {
@@ -381,7 +387,7 @@ void draw_app_context_menu(GuiState &gui, EmuEnvState &emuenv, const std::string
                                     // Add other replacement associations here if necessary.
                                 };
 
-                                // Replace all occurences found in title
+                                // Replace all occurrences found in title
                                 for (const auto &[replace, with] : replace_map) {
                                     boost::replace_all(title, replace, with);
                                 }
@@ -406,15 +412,15 @@ void draw_app_context_menu(GuiState &gui, EmuEnvState &emuenv, const std::string
                             auto user = std::getenv("USER");
 #endif // WIN32
 
-                            // Test environement summary
+                            // Test environment summary
                             const auto test_env_summary = fmt::format(
-                                "%23 Test environment summary%0A- Tested by: {} <!-- Change your username if is needed -->%0A- OS: Windows 10/macOS/Linux Distro, Kernel Version?%0A- CPU: AMD/Intel?%0A- GPU: AMD/NVIDIA/Intel?%0A- RAM: {} GB",
-                                user ? user : "?", SDL_GetSystemRAM() / 1000);
+                                "%23 Test environment summary%0A- Tested by: {} <!-- Change your username if is needed -->%0A- OS: {}%0A- CPU: {}%0A- GPU: {}%0A- RAM: {} GB",
+                                user ? user : "?", CppCommon::Environment::OSVersion(), CppCommon::CPU::Architecture(), emuenv.renderer->get_gpu_name(), SDL_GetSystemRAM() / 1000);
 
                             const auto rest_of_body = "%23 Issues%0A<!-- Summary of problems -->%0A%0A%23 Screenshots%0A![image](https://?)%0A%0A%23 Log%0A%0A%23 Recommended labels%0A<!-- See https://github.com/Vita3K/compatibility/labels -->%0A- A?%0A- B?%0A- C?";
 
                             open_path(fmt::format(
-                                "{}/new?title={} [{}]&body={}%0A%0A{}%0A%0A{}%0A%0A{}",
+                                "{}/new?assignees=&labels=&projects=&template=1-ISSUE_TEMPLATE.md&title={} [{}]&body={}%0A%0A{}%0A%0A{}%0A%0A{}",
                                 ISSUES_URL, title, title_id, app_summary, vita3k_summary, test_env_summary, rest_of_body));
                         }
                     }

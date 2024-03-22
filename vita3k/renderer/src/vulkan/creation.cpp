@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License along
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-#include <renderer/functions.h>
 
 #include <xxh3.h>
 
@@ -86,7 +84,7 @@ VKContext::VKContext(VKState &state, MemState &mem)
     };
     scissor = vk::Rect2D{
         .offset = { 0, 0 },
-        .extent = { 960U * state.res_multiplier, 544U * state.res_multiplier }
+        .extent = { static_cast<uint32_t>(960 * state.res_multiplier), static_cast<uint32_t>(544U * state.res_multiplier) }
     };
 
     // allocate descriptor pools
@@ -153,10 +151,10 @@ VKContext::VKContext(VKState &state, MemState &mem)
 }
 
 VKRenderTarget::VKRenderTarget(VKState &state, const SceGxmRenderTargetParams &params)
-    : color(params.width * state.res_multiplier, params.height * state.res_multiplier, vk::Format::eR8G8B8A8Unorm)
-    , depthstencil(params.width * state.res_multiplier, params.height * state.res_multiplier, vk::Format::eD32SfloatS8Uint) {
-    width = params.width * state.res_multiplier;
-    height = params.height * state.res_multiplier;
+    : color(static_cast<uint32_t>(params.width * state.res_multiplier), static_cast<uint32_t>(params.height * state.res_multiplier), vk::Format::eR8G8B8A8Unorm)
+    , depthstencil(static_cast<uint32_t>(params.width * state.res_multiplier), static_cast<uint32_t>(params.height * state.res_multiplier), vk::Format::eD32SfloatS8Uint) {
+    width = static_cast<uint32_t>(params.width * state.res_multiplier);
+    height = static_cast<uint32_t>(params.height * state.res_multiplier);
 
     vk::ImageUsageFlags color_usage = vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eInputAttachment;
     if (state.features.support_shader_interlock)
@@ -226,7 +224,6 @@ bool create(VKState &state, std::unique_ptr<RenderTarget> &rt, const SceGxmRende
 }
 
 void destroy(VKState &state, std::unique_ptr<RenderTarget> &rt) {
-    VKContext &context = *reinterpret_cast<VKContext *>(state.context);
     VKRenderTarget &render_target = *reinterpret_cast<VKRenderTarget *>(rt.get());
 
     // don't forget to destroy the framebuffers

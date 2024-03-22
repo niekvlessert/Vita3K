@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,11 +20,12 @@
 #include <map>
 #include <mutex>
 #include <string>
+#include <util/fs.h>
 #include <vector>
 
 struct RegMgrState {
     std::mutex mutex;
-    std::wstring system_dreg_path;
+    fs::path system_dreg_path;
 
     std::map<std::string, std::map<std::string, std::vector<char>>> system_dreg;
 };

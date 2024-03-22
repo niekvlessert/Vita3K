@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -34,9 +34,9 @@ static void draw_ime_dialog(DialogState &common_dialog, float FONT_SCALE) {
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() / 2.f) - (ImGui::CalcTextSize(common_dialog.ime.title).x / 2.f));
     ImGui::TextColored(GUI_COLOR_TEXT_TITLE, "%s", common_dialog.ime.title);
     ImGui::Spacing();
-    // TODO: setting the bufsize to max_length + 1 is not correct (except when using only 1-byte UTF-8 caracters)
-    // the reason being that the max_length is the number of caracters allowed but the parameter given to ImGui::InputTextMultiline/ImGui::InputText
-    // is the size of the buffer, which includes the ending 0 (+1). However, as caracters can have a variable size using UTF-8,
+    // TODO: setting the bufsize to max_length + 1 is not correct (except when using only 1-byte UTF-8 characters)
+    // the reason being that the max_length is the number of characters allowed but the parameter given to ImGui::InputTextMultiline/ImGui::InputText
+    // is the size of the buffer, which includes the ending 0 (+1). However, as characters can have a variable size using UTF-8,
     // this will not necessarily match the max_length (but be at most it)
     if (common_dialog.ime.multiline) {
         ImGui::InputTextMultiline(
@@ -198,7 +198,7 @@ void browse_save_data_dialog(GuiState &gui, EmuEnvState &emuenv, const uint32_t 
     case SCE_SAVEDATA_DIALOG_MODE_FIXED:
         switch (button) {
         case SCE_CTRL_RIGHT:
-            current_save_data_dialog_button_id = std::min(current_save_data_dialog_button_id + 1, static_cast<int32_t>(emuenv.common_dialog.savedata.btn_num - 1));
+            current_save_data_dialog_button_id = std::min<int32_t>(current_save_data_dialog_button_id + 1, emuenv.common_dialog.savedata.btn_num - 1);
             break;
         case SCE_CTRL_LEFT:
             current_save_data_dialog_button_id = std::max(current_save_data_dialog_button_id - 1, 0);
@@ -218,8 +218,8 @@ void browse_save_data_dialog(GuiState &gui, EmuEnvState &emuenv, const uint32_t 
         const auto save_data_slot_list_size = static_cast<int32_t>(save_data_slot_list.size() - 1);
 
         // Find current selected save data slot in save data slot list
-        const auto save_data_slot_list_index = std::find(save_data_slot_list.begin(), save_data_slot_list.end(), current_selected_save_data_slot);
-        if (!emuenv.common_dialog.savedata.draw_info_window && (save_data_slot_list_index == save_data_slot_list.end())) {
+        const int32_t list_index = vector_utils::find_index(save_data_slot_list, current_selected_save_data_slot);
+        if (!emuenv.common_dialog.savedata.draw_info_window && (list_index == -1)) {
             if (save_data_slot_list.empty()) {
                 switch (button) {
                 case SCE_CTRL_CROSS:
@@ -234,7 +234,6 @@ void browse_save_data_dialog(GuiState &gui, EmuEnvState &emuenv, const uint32_t 
             return;
         }
 
-        const auto list_index = static_cast<int32_t>(std::distance(save_data_slot_list.begin(), save_data_slot_list_index));
         const auto prev_save_data_slot = save_data_slot_list[std::max(list_index - 1, 0)];
         const auto next_save_data_slot = save_data_slot_list[std::min(list_index + 1, save_data_slot_list_size)];
         const auto is_save_exist = emuenv.common_dialog.savedata.slot_info[current_selected_save_data_slot].isExist == 1;
@@ -328,14 +327,14 @@ void browse_save_data_dialog(GuiState &gui, EmuEnvState &emuenv, const uint32_t 
 static ImTextureID check_and_init_icon_texture(GuiState &gui, EmuEnvState &emuenv, const uint32_t index) {
     auto &icon_texture = emuenv.common_dialog.savedata.icon_texture[index];
     if (!icon_texture && !emuenv.common_dialog.savedata.icon_buffer[index].empty()) {
-        icon_texture = load_image(gui, (const char *)emuenv.common_dialog.savedata.icon_buffer[index].data(),
+        icon_texture = load_image(gui, emuenv.common_dialog.savedata.icon_buffer[index].data(),
             static_cast<int>(emuenv.common_dialog.savedata.icon_buffer[index].size()));
     }
 
     return icon_texture;
 }
 
-static void draw_save_info(GuiState &gui, EmuEnvState &emuenv, const ImVec2 WINDOW_SIZE, float FONT_SCALE, ImVec2 SCALE, int flags, int loop_index, const ImTextureID icon_texture) {
+static void draw_save_info(GuiState &gui, EmuEnvState &emuenv, const ImVec2 WINDOW_SIZE, float FONT_SCALE, ImVec2 SCALE, const ImTextureID icon_texture) {
     const ImVec2 THUMBNAIL_SIZE = ImVec2(160.f * SCALE.x, 90.f * SCALE.y);
     auto lang = emuenv.common_dialog.lang.save_data.info;
 
@@ -512,7 +511,7 @@ static void draw_savedata_dialog(GuiState &gui, EmuEnvState &emuenv, float FONT_
         ImGui::SetNextWindowBgAlpha(0.f);
         ImGui::BeginChild("##selectables", WINDOW_SIZE, false, flags);
         if (emuenv.common_dialog.savedata.draw_info_window)
-            draw_save_info(gui, emuenv, WINDOW_SIZE, FONT_SCALE, SCALE, flags, emuenv.common_dialog.savedata.selected_save, emuenv.common_dialog.savedata.icon_texture[emuenv.common_dialog.savedata.selected_save]);
+            draw_save_info(gui, emuenv, WINDOW_SIZE, FONT_SCALE, SCALE, emuenv.common_dialog.savedata.icon_texture[emuenv.common_dialog.savedata.selected_save]);
         else {
             for (std::uint32_t i = 0; i < emuenv.common_dialog.savedata.slot_list_size; i++) {
                 ImGui::PushID(i);

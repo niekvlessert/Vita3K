@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This file contains internal types used by Vita3K, and the
 // internal Vita3K's implementation of SceGxm's opaque types.
@@ -174,6 +174,9 @@ struct SceGxmSyncObject {
     // timestamp for the last time the object was displayed
     std::atomic<uint32_t> last_display;
 
+    // last signal operation done, given using the global timestamp
+    uint32_t last_operation_global = 0;
+
     std::mutex lock;
     std::condition_variable cond;
 };
@@ -274,8 +277,10 @@ struct GxmContextState {
 };
 
 struct SceGxmFragmentProgram {
-    size_t reference_count = 1;
+    std::atomic<uint32_t> reference_count = 1;
     Ptr<const SceGxmProgram> program;
+    // only necessary with async compilation
+    std::atomic<uint32_t> compile_threads_on = 0;
     bool is_maskupdate;
     std::unique_ptr<renderer::FragmentProgram> renderer_data;
 };
@@ -320,12 +325,14 @@ struct SceGxmShaderPatcherParams {
 };
 
 struct SceGxmVertexProgram {
-    size_t reference_count = 1;
+    std::atomic<uint32_t> reference_count = 1;
     Ptr<const SceGxmProgram> program;
     std::vector<SceGxmVertexStream> streams;
     std::vector<SceGxmVertexAttribute> attributes;
     std::unique_ptr<renderer::VertexProgram> renderer_data;
     uint64_t key_hash;
+    // only necessary with async compilation
+    std::atomic<uint32_t> compile_threads_on = 0;
 };
 
 struct SceGxmPrecomputedDraw {

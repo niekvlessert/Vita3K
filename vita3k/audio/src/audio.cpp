@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
 #include <cassert>
 #include <cstring>
 
-static void mix_out_port(uint8_t *stream, uint8_t *temp_buffer, int len, AudioOutPort &port, const ResumeAudioThread &resume_thread) {
+static void mix_out_port(uint8_t *stream, uint8_t *temp_buffer, int len, float global_volume, AudioOutPort &port, const ResumeAudioThread &resume_thread) {
     ZoneScopedC(0xF6C2FF); // Tracy - Track function scope with color thistle
 
     // How much data is available?
@@ -57,7 +57,7 @@ static void mix_out_port(uint8_t *stream, uint8_t *temp_buffer, int len, AudioOu
     const int bytes_got = SDL_AudioStreamGet(port.stream.get(), temp_buffer, bytes_to_get);
     lock.unlock();
     if (bytes_got > 0) {
-        SDL_MixAudioFormat(stream, temp_buffer, AUDIO_S16LSB, bytes_got, static_cast<int>(port.volume * SDL_MIX_MAXVOLUME));
+        SDL_MixAudioFormat(stream, temp_buffer, AUDIO_S16LSB, bytes_got, static_cast<int>(port.volume * global_volume * SDL_MIX_MAXVOLUME));
     }
 }
 
@@ -70,14 +70,14 @@ void AudioAdapter::audio_callback(uint8_t *stream, int len_bytes) {
         // Read from shared state.
         const std::lock_guard<std::mutex> lock(state.mutex);
         ports.reserve(state.out_ports.size());
-        for (const AudioOutPortPtrs::value_type &port : state.out_ports) {
-            ports.push_back(port.second);
+        for (const auto &[_, port] : state.out_ports) {
+            ports.push_back(port);
         }
     }
     std::memset(stream, state.spec.silence, len_bytes);
 
     for (const AudioOutPortPtr &port : ports) {
-        mix_out_port(stream, temp_buffer.data(), len_bytes, *port.get(), state.resume_thread);
+        mix_out_port(stream, temp_buffer.data(), len_bytes, state.global_volume, *port.get(), state.resume_thread);
     }
 
     FrameMarkNamed("Audio"); // Tracy - End discontinuous frame for audio rendering
@@ -127,7 +127,7 @@ AudioOutPortPtr AudioState::open_port(int nb_channels, int freq, int nb_sample) 
         if (!stream)
             return nullptr;
 
-        const AudioOutPortPtr port = std::make_shared<AudioOutPort>();
+        AudioOutPortPtr port = std::make_shared<AudioOutPort>();
         port->len_bytes = nb_sample * nb_channels * sizeof(int16_t);
         port->stream = stream;
 
@@ -135,6 +135,7 @@ AudioOutPortPtr AudioState::open_port(int nb_channels, int freq, int nb_sample) 
     } else {
         // let the adapter open the port
         AudioOutPortPtr port = adapter->open_port(nb_channels, freq, nb_sample);
+        adapter->set_volume(*port, global_volume);
         return port;
     }
 }
@@ -169,7 +170,21 @@ void AudioState::audio_output(ThreadState &thread, AudioOutPort &out_port, const
 void AudioState::set_volume(AudioOutPort &out_port, float volume) {
     out_port.volume = volume;
 
-    adapter->set_volume(out_port, volume);
+    if (!adapter->single_stream) {
+        adapter->set_volume(out_port, volume * global_volume);
+    }
+}
+
+void AudioState::set_global_volume(float volume) {
+    global_volume = volume;
+
+    if (!adapter->single_stream) {
+        // Update adapter volume for each port.
+        const std::lock_guard lock(mutex);
+        for (const auto &[_, port] : out_ports) {
+            adapter->set_volume(*port, port->volume * volume);
+        }
+    }
 }
 
 void AudioState::switch_state(const bool pause) {

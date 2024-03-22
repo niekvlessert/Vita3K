@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -93,10 +93,10 @@ bool init_manual(GuiState &gui, EmuEnvState &emuenv, const std::string &app_path
         int32_t width, height;
         for (const auto &manual : fs::directory_iterator(APP_PATH / manual_path)) {
             if (manual.path().extension() == ".png") {
-                const auto page_path = manual_path / manual.path().filename().string();
+                const auto page_path = manual_path / manual.path().filename();
 
                 vfs::FileBuffer buffer;
-                vfs::read_app_file(buffer, emuenv.pref_path.wstring(), app_path, page_path);
+                vfs::read_app_file(buffer, emuenv.pref_path, app_path, page_path);
 
                 if (buffer.empty()) {
                     LOG_WARN("Manual not found for title: {} [{}].", app_path, APP_INDEX->title);
@@ -106,7 +106,7 @@ bool init_manual(GuiState &gui, EmuEnvState &emuenv, const std::string &app_path
                 // Load image data from memory buffer and check if it's valid
                 stbi_uc *data = stbi_load_from_memory(buffer.data(), static_cast<int>(buffer.size()), &width, &height, nullptr, STBI_rgb_alpha);
                 if (!data) {
-                    LOG_ERROR("Invalid manual image for title: {} [{}] in path: {}.", app_path, APP_INDEX->title, page_path.string());
+                    LOG_ERROR("Invalid manual image for title: {} [{}] in path: {}.", app_path, APP_INDEX->title, page_path);
                     return false;
                 }
 
@@ -167,7 +167,7 @@ void draw_manual(GuiState &gui, EmuEnvState &emuenv) {
     // Set window font scale for buttons
     ImGui::SetWindowFontScale(RES_SCALE.x);
 
-    // Hide button wien right click is pressed on mouse
+    // Hide button when right click is pressed on mouse
     if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseClicked(0))
         hidden_button = !hidden_button;
 

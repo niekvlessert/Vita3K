@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -157,6 +157,13 @@ struct PostSurfaceSyncRequest {
     ColorSurfaceCacheInfo *cache_info;
 };
 
+using CallbackRequestFunction = std::function<void()>;
+struct CallbackRequest {
+    // use a pointer so the size is similar to other elements of WaitThreadRequest
+    // and not to have to mess with move semantics
+    CallbackRequestFunction *callback;
+};
+
 // A parallel thread is handling these request and telling other waiting threads
 // when they are done
 // only used if memory mapping is enabled
@@ -165,7 +172,8 @@ typedef std::variant<
     NotificationRequest,
     FrameDoneRequest,
     PostSurfaceSyncRequest,
-    SyncSignalRequest>
+    SyncSignalRequest,
+    CallbackRequest>
     WaitThreadRequest;
 
 struct VKContext : public renderer::Context {

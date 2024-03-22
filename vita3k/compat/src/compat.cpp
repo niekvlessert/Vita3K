@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ static const uint32_t db_version = 1;
 bool load_app_compat_db(GuiState &gui, EmuEnvState &emuenv) {
     const auto app_compat_db_path = emuenv.cache_path / "app_compat_db.xml";
     if (!fs::exists(app_compat_db_path)) {
-        LOG_WARN("Compatibility database not found at {}.", app_compat_db_path.string());
+        LOG_WARN("Compatibility database not found at {}.", app_compat_db_path);
         return false;
     }
 
@@ -53,7 +53,7 @@ bool load_app_compat_db(GuiState &gui, EmuEnvState &emuenv) {
     pugi::xml_document doc;
     pugi::xml_parse_result result = doc.load_file(app_compat_db_path.c_str());
     if (!result) {
-        LOG_ERROR("Compatibility database {} could not be loaded: {}", app_compat_db_path.string(), result.description());
+        LOG_ERROR("Compatibility database {} could not be loaded: {}", app_compat_db_path, result.description());
         return false;
     }
 
@@ -134,11 +134,11 @@ bool update_app_compat_db(GuiState &gui, EmuEnvState &emuenv) {
     auto &lang = gui.lang.compat_db;
 
     // Get current date of last compat database updated at
-    const auto updated_at = net_utils::get_web_regex_result(latest_link, std::regex("Updated at: (\\d{2}-\\d{2}-\\d{4} \\d{2}:\\d{2}:\\d{2})"));
+    const auto updated_at = net_utils::get_web_regex_result(latest_link, std::regex(R"(Updated at: (\d{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2}))"));
     if (updated_at.empty()) {
         gui.info_message.title = lang["error"];
         gui.info_message.level = spdlog::level::err;
-        gui.info_message.msg = lang["get_failed"].c_str();
+        gui.info_message.msg = lang["get_failed"];
         return false;
     }
 

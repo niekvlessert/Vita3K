@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,10 +21,6 @@
 #include <kernel/state.h>
 #include <mem/ptr.h>
 #include <util/align.h>
-
-#include <cpu/functions.h>
-#include <util/find.h>
-#include <util/lock_and_find.h>
 
 #include <util/log.h>
 
@@ -51,6 +47,9 @@ bool ThreadSignal::send() {
 
 int ThreadState::init(const char *name, Ptr<const void> entry_point, int init_priority, SceInt32 affinity_mask, int stack_size, const SceKernelThreadOptParam *option = nullptr) {
     constexpr size_t KERNEL_TLS_SIZE = 0x800;
+
+    // the stack size should be page-aligned
+    stack_size = align(stack_size, KiB(4));
 
     this->name = name;
     this->entry_point = entry_point.address();
@@ -114,7 +113,7 @@ int ThreadState::init(const char *name, Ptr<const void> entry_point, int init_pr
 }
 
 void ThreadState::raise_waiting_threads() {
-    for (auto t : waiting_threads) {
+    for (const auto &t : waiting_threads) {
         const std::unique_lock<std::mutex> lock(t->mutex);
         assert(t->status == ThreadStatus::wait);
         t->status = ThreadStatus::run;
@@ -137,12 +136,9 @@ int ThreadState::start(SceSize arglen, const Ptr<void> argp, bool run_entry_call
 
     // Copy data to stack
     if (argp && arglen > 0) {
-        const Address stack_top = stack.get() + stack_size;
-        const int aligned_size = align(arglen, 8);
-        const Address data_addr = stack_top - aligned_size;
+        const Address data_addr = stack_alloc(*cpu, align(arglen, 8));
         memcpy(Ptr<uint8_t>(data_addr).get(mem), argp.get(mem), arglen);
         write_reg(*cpu, 1, data_addr);
-        write_sp(*cpu, data_addr);
     } else {
         write_reg(*cpu, 1, 0);
     }
@@ -194,18 +190,20 @@ bool ThreadState::run_loop() {
             return;
 
         ThreadToDo old_to_do = to_do;
-        to_do = ThreadToDo::run;
         int old_call_level = call_level;
+        uint32_t old_returned_value = returned_value;
+        to_do = ThreadToDo::run;
         call_level = 1;
 
         lock.unlock();
-        int ret = run_callback(kernel.thread_event_end.address(), { SCE_KERNEL_THREAD_EVENT_TYPE_START, static_cast<uint32_t>(id), 0, kernel.thread_event_end_arg });
+        int ret = run_callback(kernel.thread_event_end.address(), { SCE_KERNEL_THREAD_EVENT_TYPE_END, static_cast<uint32_t>(id), 0, kernel.thread_event_end_arg });
         if (ret != 0)
             LOG_WARN("Thread start event handler returned {}", log_hex(ret));
         lock.lock();
 
         to_do = old_to_do;
         call_level = old_call_level;
+        returned_value = old_returned_value;
     };
 
     while (true) {
@@ -298,7 +296,7 @@ bool ThreadState::run_loop() {
     }
 }
 
-void ThreadState::push_arguments(Address callback_address, const std::vector<uint32_t> &args) {
+void ThreadState::push_arguments(const std::vector<uint32_t> &args) {
     Address sp = read_sp(*cpu);
     for (size_t i = 0; i < std::min(args.size(), static_cast<size_t>(4)); i++) {
         write_reg(*cpu, i, args[i]);
@@ -327,10 +325,10 @@ uint32_t ThreadState::run_callback(Address callback_address, const std::vector<u
     // we shouldn't have to clean the context I believe
     write_pc(*cpu, callback_address);
     write_lr(*cpu, cpu->halt_instruction_pc);
-    push_arguments(callback_address, args);
+    push_arguments(args);
     thread_lock.unlock();
 
-    // unlock but then immediatly lock back in the run_loop function
+    // unlock but then immediately lock back in the run_loop function
     // shouldn't cause an issue, but maybe we could use a recursive mutex instead
     run_loop();
 
@@ -410,10 +408,12 @@ std::string ThreadState::log_stack_traceback() const {
     std::stringstream ss;
     const Address sp = read_sp(*cpu);
     for (Address addr = sp - START_OFFSET; addr <= sp + END_OFFSET; addr += 4) {
-        const Address value = *Ptr<uint32_t>(addr).get(mem);
-        const auto mod = kernel.find_module_by_addr(value);
-        if (mod)
-            ss << fmt::format("{} (module: {})\n", log_hex(value), mod->module_name);
+        if (Ptr<uint32_t>(addr).valid(mem)) {
+            const Address value = *Ptr<uint32_t>(addr).get(mem);
+            const auto mod = kernel.find_module_by_addr(value);
+            if (mod)
+                ss << fmt::format("{} (module: {})\n", log_hex(value), mod->module_name);
+        }
     }
     return ss.str();
 }

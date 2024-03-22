@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@ GLenum attribute_format_to_gl_type(SceGxmAttributeFormat format) {
     return GL_UNSIGNED_BYTE;
 }
 
-GLboolean attribute_format_normalised(SceGxmAttributeFormat format) {
+GLboolean attribute_format_normalized(SceGxmAttributeFormat format) {
     R_PROFILE(__func__);
 
     switch (format) {

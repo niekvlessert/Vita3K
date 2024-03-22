@@ -543,6 +543,15 @@
 		<save>Сохранить</save>
 	</settings_dialog>
 
+	<sys_apps_title>
+		<browser>Браузер</browser>
+		<internet_browser>Веб-браузер</internet_browser>
+		<trophies>Призы</trophies>
+		<trophy_collection>Коллекция призов</trophy_collection>
+		<settings>Настройки</settings>
+		<content_manager>Управление данными</content_manager>
+	</sys_apps_title>
+
 	<trophy_collection>
 		<delete_trophy>Удалить призы</delete_trophy>
 		<trophy_deleted>Информация о призах, сохранённая для этого пользователя, 

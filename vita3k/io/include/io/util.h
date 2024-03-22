@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -95,16 +95,10 @@ public:
         return file_info.access_mode;
     }
 
-// Overloaded functions for separate systems
-#ifdef WIN32
-    const wchar_t *get_char_path() const {
-        return file_info.sys_loc.generic_path().wstring().c_str();
+    // Returning type depends of system
+    auto get_char_path() const {
+        return file_info.sys_loc.generic_path().native().c_str();
     }
-#else
-    const char *get_char_path() const {
-        return file_info.sys_loc.generic_path().string().c_str();
-    }
-#endif
 
     // Modify IO parameters
     void create_io_perms(const int flags) {

@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ class Block {
 public:
     typedef std::function<void(Address)> Deleter;
 
-    explicit Block(Address addr, Deleter deleter)
+    explicit Block(Address addr, const Deleter &deleter)
         : addr(addr)
         , deleter(deleter) {
     }
@@ -50,6 +50,9 @@ public:
         deleter = nullptr;
         return *this;
     }
+
+    Block(const Block &) = delete;
+    const Block &operator=(const Block &) = delete;
 
     ~Block() {
         if (deleter) {
@@ -82,9 +85,6 @@ public:
     }
 
 private:
-    Block(const Block &) = delete;
-    const Block &operator=(const Block &) = delete;
-
     Address addr;
     Deleter deleter;
 };

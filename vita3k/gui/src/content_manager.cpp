@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -53,8 +53,8 @@ void get_app_info(GuiState &gui, EmuEnvState &emuenv, const std::string &app_pat
         auto &lang = gui.lang.app_context.info;
         gui.app_selector.app_info.trophy = fs::exists(APP_PATH / "sce_sys/trophy") ? lang["eligible"] : lang["ineligible"];
 
-        const auto last_writen = fs::last_write_time(APP_PATH);
-        SAFE_LOCALTIME(&last_writen, &gui.app_selector.app_info.updated);
+        const auto last_written = fs::last_write_time(APP_PATH);
+        SAFE_LOCALTIME(&last_written, &gui.app_selector.app_info.updated);
     }
 }
 
@@ -103,11 +103,11 @@ static void get_save_data_list(GuiState &gui, EmuEnvState &emuenv) {
 
     for (const auto &save : fs::directory_iterator(SAVE_PATH)) {
         const auto title_id = save.path().stem().generic_string();
-        if (fs::is_directory(save.path()) && !fs::is_empty(save.path()) && get_app_index(gui, title_id) != gui.app_selector.user_apps.end()) {
+        if (fs::is_directory(save.path()) && !fs::is_empty(save.path()) && get_app_index(gui, title_id)) {
             tm updated_tm = {};
 
-            const auto last_writen = fs::last_write_time(save);
-            SAFE_LOCALTIME(&last_writen, &updated_tm);
+            const auto last_written = fs::last_write_time(save);
+            SAFE_LOCALTIME(&last_written, &updated_tm);
 
             const auto size = get_recursive_directory_size(save);
             save_data_list.push_back({ get_app_index(gui, title_id)->title, title_id, size, updated_tm });
@@ -204,15 +204,15 @@ static void get_content_info(GuiState &gui, EmuEnvState &emuenv) {
         for (const auto &addcont : fs::directory_iterator(ADDCONT_PATH)) {
             const auto content_id = addcont.path().stem().string();
 
-            const auto last_writen = fs::last_write_time(addcont);
-            SAFE_LOCALTIME(&last_writen, &addcont_info[content_id].date);
+            const auto last_written = fs::last_write_time(addcont);
+            SAFE_LOCALTIME(&last_written, &addcont_info[content_id].date);
 
             const auto addcont_size = get_recursive_directory_size(addcont);
             addcont_info[content_id].size = get_unit_size(addcont_size);
 
             const auto content_path{ fs::path("addcont") / app_selected / content_id };
             vfs::FileBuffer params;
-            if (vfs::read_file(VitaIoDevice::ux0, params, emuenv.pref_path.wstring(), content_path.string() + "sce_sys/param.sfo")) {
+            if (vfs::read_file(VitaIoDevice::ux0, params, emuenv.pref_path, content_path / "sce_sys/param.sfo")) {
                 SfoFile sfo_handle;
                 sfo::load(sfo_handle, params);
                 if (!sfo::get_data_by_key(addcont_info[content_id].name, sfo_handle, fmt::format("TITLE_{:0>2d}", emuenv.cfg.sys_lang)))
@@ -363,7 +363,7 @@ void draw_content_manager(GuiState &gui, EmuEnvState &emuenv) {
                     if (menu == "app") {
                         fs::remove_all(emuenv.pref_path / "ux0/app" / content.first);
                         fs::remove_all(emuenv.pref_path / "ux0/addcont" / content.first);
-                        gui.app_selector.user_apps.erase(get_app_index(gui, content.first));
+                        gui.app_selector.user_apps.erase(gui.app_selector.user_apps.begin() + (get_app_index(gui, content.first) - &gui.app_selector.user_apps[0]));
                         gui.app_selector.user_apps_icon.erase(content.first);
                     }
                     const auto SAVE_PATH{ emuenv.pref_path / "ux0/user" / emuenv.io.user_id / "savedata" / content.first };

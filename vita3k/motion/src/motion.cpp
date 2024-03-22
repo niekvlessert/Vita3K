@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -82,7 +82,7 @@ void refresh_motion(MotionState &state, CtrlState &ctrl_state) {
         const bool can_use_timestamp_fn = sdl_version.minor >= 26;
 
         std::lock_guard<std::mutex> guard(ctrl_state.mutex);
-        for (auto controller : ctrl_state.controllers) {
+        for (const auto &controller : ctrl_state.controllers) {
             if (!found_gyro && controller.second.has_gyro) {
                 if (can_use_timestamp_fn && SDL_GameControllerGetSensorDataWithTimestamp(controller.second.controller.get(), SDL_SENSOR_GYRO, &gyro_timestamp, reinterpret_cast<float *>(&gyro), 3) == 0)
                     found_gyro = true;

@@ -1,5 +1,5 @@
 // Vita3K emulator project
-// Copyright (C) 2023 Vita3K team
+// Copyright (C) 2024 Vita3K team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <config/state.h>
 #include <display/state.h>
-#include <glutil/gl.h>
 #include <io/VitaIoDevice.h>
 #include <io/state.h>
 #include <io/vfs.h>
@@ -225,22 +224,22 @@ static void init_font(GuiState &gui, EmuEnvState &emuenv) {
         gui.fw_font = true;
         font_config.SizePixels = 19.2f;
 
-        gui.vita_font = io.Fonts->AddFontFromFileTTF(latin_fw_font_path.string().c_str(), font_config.SizePixels, &font_config, latin_range);
+        gui.vita_font = io.Fonts->AddFontFromFileTTF(fs_utils::path_to_utf8(latin_fw_font_path).c_str(), font_config.SizePixels, &font_config, latin_range);
         font_config.MergeMode = true;
 
-        io.Fonts->AddFontFromFileTTF((fw_font_path / "jpn0.pvf").string().c_str(), font_config.SizePixels, &font_config, japanese_and_extra_ranges.Data);
+        io.Fonts->AddFontFromFileTTF(fs_utils::path_to_utf8(fw_font_path / "jpn0.pvf").c_str(), font_config.SizePixels, &font_config, japanese_and_extra_ranges.Data);
 
         const auto sys_lang = static_cast<SceSystemParamLang>(emuenv.cfg.sys_lang);
         if (emuenv.cfg.asia_font_support || (sys_lang == SCE_SYSTEM_PARAM_LANG_KOREAN))
-            io.Fonts->AddFontFromFileTTF((fw_font_path / "kr0.pvf").string().c_str(), font_config.SizePixels, &font_config, korean_range);
+            io.Fonts->AddFontFromFileTTF(fs_utils::path_to_utf8(fw_font_path / "kr0.pvf").c_str(), font_config.SizePixels, &font_config, korean_range);
         if (emuenv.cfg.asia_font_support || (sys_lang == SCE_SYSTEM_PARAM_LANG_CHINESE_T) || (sys_lang == SCE_SYSTEM_PARAM_LANG_CHINESE_S))
-            io.Fonts->AddFontFromFileTTF((fw_font_path / "cn0.pvf").string().c_str(), font_config.SizePixels, &font_config, chinese_range);
+            io.Fonts->AddFontFromFileTTF(fs_utils::path_to_utf8(fw_font_path / "cn0.pvf").c_str(), font_config.SizePixels, &font_config, chinese_range);
         font_config.MergeMode = false;
 
         large_font_config.SizePixels = 116.f;
-        gui.large_font = io.Fonts->AddFontFromFileTTF(latin_fw_font_path.string().c_str(), large_font_config.SizePixels, &large_font_config, large_font_chars);
+        gui.large_font = io.Fonts->AddFontFromFileTTF(fs_utils::path_to_utf8(latin_fw_font_path).c_str(), large_font_config.SizePixels, &large_font_config, large_font_chars);
     } else {
-        LOG_WARN("Could not find firmware font file at \"{}\", install firmware fonts package to fix this.", latin_fw_font_path.string());
+        LOG_WARN("Could not find firmware font file at \"{}\", install firmware fonts package to fix this.", latin_fw_font_path);
         font_config.SizePixels = 22.f;
 
         // Set up default font path
@@ -248,21 +247,21 @@ static void init_font(GuiState &gui, EmuEnvState &emuenv) {
 
         // Check existence of default font file
         if (fs::exists(default_font_path)) {
-            gui.vita_font = io.Fonts->AddFontFromFileTTF((default_font_path / "mplus-1mn-bold.ttf").string().c_str(), font_config.SizePixels, &font_config, latin_range);
+            gui.vita_font = io.Fonts->AddFontFromFileTTF(fs_utils::path_to_utf8(default_font_path / "mplus-1mn-bold.ttf").c_str(), font_config.SizePixels, &font_config, latin_range);
             font_config.MergeMode = true;
-            io.Fonts->AddFontFromFileTTF((default_font_path / "mplus-1mn-bold.ttf").string().c_str(), font_config.SizePixels, &font_config, japanese_and_extra_ranges.Data);
+            io.Fonts->AddFontFromFileTTF(fs_utils::path_to_utf8(default_font_path / "mplus-1mn-bold.ttf").c_str(), font_config.SizePixels, &font_config, japanese_and_extra_ranges.Data);
 
             const auto sys_lang = static_cast<SceSystemParamLang>(emuenv.cfg.sys_lang);
             if (sys_lang == SCE_SYSTEM_PARAM_LANG_CHINESE_S)
-                io.Fonts->AddFontFromFileTTF((default_font_path / "SourceHanSansSC-Bold-Min.ttf").string().c_str(), font_config.SizePixels, &font_config, japanese_and_extra_ranges.Data);
+                io.Fonts->AddFontFromFileTTF(fs_utils::path_to_utf8(default_font_path / "SourceHanSansSC-Bold-Min.ttf").c_str(), font_config.SizePixels, &font_config, japanese_and_extra_ranges.Data);
             font_config.MergeMode = false;
 
             large_font_config.SizePixels = 134.f;
-            gui.large_font = io.Fonts->AddFontFromFileTTF((default_font_path / "mplus-1mn-bold.ttf").string().c_str(), large_font_config.SizePixels, &large_font_config, large_font_chars);
+            gui.large_font = io.Fonts->AddFontFromFileTTF(fs_utils::path_to_utf8(default_font_path / "mplus-1mn-bold.ttf").c_str(), large_font_config.SizePixels, &large_font_config, large_font_chars);
 
             LOG_INFO("Using default Vita3K font.");
         } else
-            LOG_WARN("Could not find default Vita3K font, using default ImGui font.", default_font_path.string());
+            LOG_WARN("Could not find default Vita3K font at \"{}\", using default ImGui font.", default_font_path);
     }
 
     // Build font atlas loaded and upload to GPU
@@ -281,8 +280,8 @@ vfs::FileBuffer init_default_icon(GuiState &gui, EmuEnvState &emuenv) {
     fs::path default_icon = emuenv.static_assets_path / "data/image/icon.png";
 
     if (fs::exists(default_fw_icon) || fs::exists(default_icon)) {
-        auto icon_path = fs::exists(default_fw_icon) ? default_fw_icon.string() : default_icon.string();
-        std::ifstream image_stream(icon_path, std::ios::binary | std::ios::ate);
+        fs::path icon_path = fs::exists(default_fw_icon) ? default_fw_icon : default_icon;
+        fs::ifstream image_stream(icon_path, std::ios::binary | std::ios::ate);
         const std::size_t fsize = image_stream.tellg();
         buffer.resize(fsize);
         image_stream.seekg(0, std::ios::beg);
@@ -298,7 +297,7 @@ static IconData load_app_icon(GuiState &gui, EmuEnvState &emuenv, const std::str
 
     const auto APP_INDEX = get_app_index(gui, app_path);
 
-    if (!vfs::read_app_file(buffer, emuenv.pref_path.wstring(), app_path, "sce_sys/icon0.png")) {
+    if (!vfs::read_app_file(buffer, emuenv.pref_path, app_path, "sce_sys/icon0.png")) {
         buffer = init_default_icon(gui, emuenv);
         if (buffer.empty()) {
             LOG_WARN("Default icon not found for title {}, [{}] in path {}.",
@@ -389,11 +388,11 @@ void init_app_background(GuiState &gui, EmuEnvState &emuenv, const std::string &
 
     const auto is_sys = app_path.starts_with("NPXS") && (app_path != "NPXS10007");
     if (is_sys)
-        vfs::read_file(VitaIoDevice::vs0, buffer, emuenv.pref_path.wstring(), "app/" + app_path + "/sce_sys/pic0.png");
+        vfs::read_file(VitaIoDevice::vs0, buffer, emuenv.pref_path, "app/" + app_path + "/sce_sys/pic0.png");
     else
-        vfs::read_app_file(buffer, emuenv.pref_path.wstring(), app_path, "sce_sys/pic0.png");
+        vfs::read_app_file(buffer, emuenv.pref_path, app_path, "sce_sys/pic0.png");
 
-    const auto title = (APP_INDEX != gui.app_selector.sys_apps.end()) && (APP_INDEX != gui.app_selector.user_apps.end()) ? APP_INDEX->title : app_path;
+    const auto title = APP_INDEX ? APP_INDEX->title : app_path;
 
     if (buffer.empty()) {
         LOG_WARN("Background not found for application {} [{}].", title, app_path);
@@ -437,7 +436,7 @@ static bool get_user_apps(GuiState &gui, EmuEnvState &emuenv) {
         // Read language of cache
         apps_cache.read((char *)&gui.app_selector.apps_cache_lang, sizeof(uint32_t));
         if (gui.app_selector.apps_cache_lang != emuenv.cfg.sys_lang) {
-            LOG_WARN("Current lang of cache: {}, is diferent config: {}, recreate it.", get_sys_lang_name(gui.app_selector.apps_cache_lang), get_sys_lang_name(emuenv.cfg.sys_lang));
+            LOG_WARN("Current lang of cache: {}, is different configuration: {}, recreate it.", get_sys_lang_name(gui.app_selector.apps_cache_lang), get_sys_lang_name(emuenv.cfg.sys_lang));
             return false;
         }
 
@@ -479,8 +478,7 @@ static bool get_user_apps(GuiState &gui, EmuEnvState &emuenv) {
 
 void save_apps_cache(GuiState &gui, EmuEnvState &emuenv) {
     const auto temp_path{ emuenv.pref_path / "ux0/temp" };
-    if (!fs::exists(temp_path))
-        fs::create_directory(temp_path);
+    fs::create_directories(temp_path);
 
     fs::ofstream apps_cache(temp_path / "apps.dat", std::ios::out | std::ios::binary);
     if (apps_cache.is_open()) {
@@ -490,7 +488,7 @@ void save_apps_cache(GuiState &gui, EmuEnvState &emuenv) {
 
         // Write version of cache
         const uint32_t versionInFile = 1;
-        apps_cache.write((char *)&versionInFile, sizeof(uint32_t));
+        apps_cache.write((const char *)&versionInFile, sizeof(uint32_t));
 
         // Write language of cache
         gui.app_selector.apps_cache_lang = emuenv.cfg.sys_lang;
@@ -501,7 +499,7 @@ void save_apps_cache(GuiState &gui, EmuEnvState &emuenv) {
             auto write = [&apps_cache](const std::string &i) {
                 const auto size = i.length();
 
-                apps_cache.write((char *)&size, sizeof(size));
+                apps_cache.write((const char *)&size, sizeof(size));
                 apps_cache.write(i.c_str(), size);
             };
 
@@ -528,7 +526,7 @@ void init_home(GuiState &gui, EmuEnvState &emuenv) {
 
     init_app_background(gui, emuenv, "NPXS10015");
 
-    regmgr::init_regmgr(emuenv.regmgr, emuenv.pref_path.wstring());
+    regmgr::init_regmgr(emuenv.regmgr, emuenv.pref_path);
 
     const auto is_cmd = emuenv.cfg.run_app_path || emuenv.cfg.content_path;
     if (!gui.users.empty() && gui.users.contains(emuenv.cfg.user_id) && (is_cmd || emuenv.cfg.auto_user_login)) {
@@ -542,9 +540,12 @@ void init_home(GuiState &gui, EmuEnvState &emuenv) {
 }
 
 void init_user_app(GuiState &gui, EmuEnvState &emuenv, const std::string &app_path) {
-    const auto APP_INDEX = get_app_index(gui, app_path);
-    if (APP_INDEX != gui.app_selector.user_apps.end()) {
-        gui.app_selector.user_apps.erase(APP_INDEX);
+    auto &user_apps = gui.app_selector.user_apps;
+    auto it = std::find_if(user_apps.begin(), user_apps.end(), [&](const App &a) {
+        return a.path == app_path;
+    });
+    if (it != user_apps.end()) {
+        user_apps.erase(it);
         gui.app_selector.user_apps_icon.erase(app_path);
     }
 
@@ -567,19 +568,19 @@ std::map<std::string, ImGui_Texture>::const_iterator get_app_icon(GuiState &gui,
     return app_icon;
 }
 
-std::vector<App>::iterator get_app_index(GuiState &gui, const std::string &app_path) {
+App *get_app_index(GuiState &gui, const std::string &app_path) {
     auto &app_type = app_path.starts_with("NPXS") && (app_path != "NPXS10007") ? gui.app_selector.sys_apps : gui.app_selector.user_apps;
     const auto app_index = std::find_if(app_type.begin(), app_type.end(), [&](const App &a) {
         return a.path == app_path;
     });
 
-    return app_index;
+    return (app_index != app_type.end()) ? &(*app_index) : nullptr;
 }
 
 void get_app_param(GuiState &gui, EmuEnvState &emuenv, const std::string &app_path) {
     emuenv.app_path = app_path;
     vfs::FileBuffer param;
-    if (vfs::read_app_file(param, emuenv.pref_path.wstring(), app_path, "sce_sys/param.sfo")) {
+    if (vfs::read_app_file(param, emuenv.pref_path, app_path, "sce_sys/param.sfo")) {
         sfo::get_param_info(emuenv.app_info, param, emuenv.cfg.sys_lang);
     } else {
         emuenv.app_info.app_addcont = emuenv.app_info.app_savedata = emuenv.app_info.app_short_title = emuenv.app_info.app_title = emuenv.app_info.app_title_id = emuenv.app_path; // Use app path as TitleID, addcont, Savedata, Short title and Title
@@ -610,7 +611,7 @@ void get_sys_apps_title(GuiState &gui, EmuEnvState &emuenv) {
     const std::array<std::string, 4> sys_apps_list = { "NPXS10003", "NPXS10008", "NPXS10015", "NPXS10026" };
     for (const auto &app : sys_apps_list) {
         vfs::FileBuffer params;
-        if (vfs::read_file(VitaIoDevice::vs0, params, emuenv.pref_path.wstring(), "app/" + app + "/sce_sys/param.sfo")) {
+        if (vfs::read_file(VitaIoDevice::vs0, params, emuenv.pref_path, "app/" + app + "/sce_sys/param.sfo")) {
             SfoFile sfo_handle;
             sfo::load(sfo_handle, params);
             sfo::get_data_by_key(emuenv.app_info.app_version, sfo_handle, "APP_VER");
@@ -622,19 +623,20 @@ void get_sys_apps_title(GuiState &gui, EmuEnvState &emuenv) {
             boost::trim(emuenv.app_info.app_title);
             sfo::get_data_by_key(emuenv.app_info.app_title_id, sfo_handle, "TITLE_ID");
         } else {
+            auto &lang = gui.lang.sys_apps_title;
             emuenv.app_info.app_version = "1.00";
             emuenv.app_info.app_category = "gda";
             emuenv.app_info.app_title_id = app;
             if (app == "NPXS10003") {
-                emuenv.app_info.app_short_title = "Browser";
-                emuenv.app_info.app_title = "Internet Browser";
+                emuenv.app_info.app_short_title = lang["browser"];
+                emuenv.app_info.app_title = lang["internet_browser"];
             } else if (app == "NPXS10008") {
-                emuenv.app_info.app_short_title = "Trophies";
-                emuenv.app_info.app_title = "Trophy Collection";
+                emuenv.app_info.app_short_title = lang["trophies"];
+                emuenv.app_info.app_title = lang["trophy_collection"];
             } else if (app == "NPXS10015")
-                emuenv.app_info.app_short_title = emuenv.app_info.app_title = "Settings";
+                emuenv.app_info.app_short_title = emuenv.app_info.app_title = lang["settings"];
             else
-                emuenv.app_info.app_short_title = emuenv.app_info.app_title = "Content Manager";
+                emuenv.app_info.app_short_title = emuenv.app_info.app_title = lang["content_manager"];
         }
         gui.app_selector.sys_apps.push_back({ emuenv.app_info.app_version, emuenv.app_info.app_category, {}, {}, {}, {}, emuenv.app_info.app_short_title, emuenv.app_info.app_title, emuenv.app_info.app_title_id, app });
     }
@@ -683,11 +685,11 @@ std::map<DateTime, std::string> get_date_time(GuiState &gui, EmuEnvState &emuenv
     return date_time_str;
 }
 
-ImTextureID load_image(GuiState &gui, const char *data, const std::uint32_t size) {
+ImTextureID load_image(GuiState &gui, const uint8_t *data, const std::uint32_t size) {
     int width;
     int height;
 
-    stbi_uc *img_data = stbi_load_from_memory(reinterpret_cast<const stbi_uc *>(data), size, &width, &height,
+    stbi_uc *img_data = stbi_load_from_memory(data, size, &width, &height,
         nullptr, STBI_rgb_alpha);
 
     if (!data)
@@ -745,7 +747,7 @@ void draw_begin(GuiState &gui, EmuEnvState &emuenv) {
         gui.app_selector.icon_async_loader->commit(gui);
 }
 
-void draw_end(GuiState &gui, SDL_Window *window) {
+void draw_end(GuiState &gui) {
     ImGui::Render();
     ImGui_ImplSdl_RenderDrawData(gui.imgui_state.get());
 }
