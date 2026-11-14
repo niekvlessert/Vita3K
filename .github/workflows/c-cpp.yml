@@ -22,37 +22,9 @@ jobs:
 
     strategy:
       fail-fast: false
+      # A/B test: isolate GXM downscale + upstream macOS readback on Apple Silicon.
       matrix:
         include:
-          - platform: linux-arm64
-            runs_on: ubuntu-26.04-arm
-            arch: aarch64
-            cmake_preset: ci-linux-clang-appimage
-            cache_path: ''
-            qt_install_deps: 'true'
-
-          - platform: windows-x64
-            runs_on: windows-latest
-            arch: x86_64
-            cmake_preset: ci-windows-msvc
-            vcpkg_root: C:\vcpkg
-            vcpkg_triplet: x64-windows-static-md
-            cache_path: C:\vcpkg-binary-cache
-            qt_install_deps: 'false'
-
-          - platform: windows-arm64
-            runs_on: windows-11-arm
-            cmake_preset: ci-windows-msys2-clang
-            msys2_env: CLANGARM64
-            cache_path: C:\msys2-ccache
-            qt_install_deps: 'false'
-
-          - platform: macos-x64
-            runs_on: macos-latest
-            cmake_preset: ci-macos-x64
-            cache_path: ~/Library/Caches/ccache
-            qt_install_deps: 'false'
-
           - platform: macos-arm64
             runs_on: macos-latest
             cmake_preset: ci-macos-arm64
@@ -210,6 +182,7 @@ jobs:
 
   # The desktop build of Linux x64 on its own, so the autotests start as soon as it is done
   linux-x64-build:
+    if: github.ref != 'refs/heads/experiment/celceta-gxm-plus-readback'
     name: Desktop (${{ matrix.platform }})
     runs-on: ${{ matrix.runs_on }}
 
@@ -226,6 +199,7 @@ jobs:
     steps: *desktop-build-steps
 
   autotests:
+    if: github.ref != 'refs/heads/experiment/celceta-gxm-plus-readback'
     name: VitaAutotests (linux-x64)
     # Its own job, so a runner lost during the tests doesn't fail the build, and a rerun of the tests
     # doesn't build again
@@ -275,6 +249,7 @@ jobs:
           bash ./.ci/run-autotests.sh vita3k/bin/Vita3K autotests
 
   android-build:
+    if: github.ref != 'refs/heads/experiment/celceta-gxm-plus-readback'
     name: Android
     runs-on: ubuntu-latest
     env:
