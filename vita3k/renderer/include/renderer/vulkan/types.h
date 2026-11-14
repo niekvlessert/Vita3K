@@ -242,6 +242,8 @@ struct VKContext : public renderer::Context {
     uint64_t scene_timestamp = 1;
     // Unlike scene_timestamp, recording splits do not advance the logical GXM scene.
     uint64_t gxm_scene_id = 0;
+    // Per-scene correction for GXM downscaled color surfaces.
+    float surface_downscale = 1.0f;
     std::vector<vk::CommandBuffer> cmdbuffers_to_submit = {};
 
     vkutil::HostRingBuffer vertex_stream_ring_buffer;
