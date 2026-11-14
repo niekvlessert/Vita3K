@@ -628,6 +628,43 @@ static void create_fragment_inputs(spv::Builder &b, SpirvShaderParameters &param
             // Size of this extra pa occupied
             // Force this to be PRIVATE
             const auto size = ((descriptor->size >> 6) & 3) + 1;
+
+            // Non-dependent texture queries write as many components as the
+            // program descriptor allows, which need not match the bound texture.
+            const DataType effective_store_type = (store_type == DataType::UNK)
+                ? tex_query_info.component_type
+                : store_type;
+            uint32_t components_per_register = 0;
+            switch (effective_store_type) {
+            case DataType::F32:
+            case DataType::UINT32:
+            case DataType::INT32:
+                components_per_register = 1;
+                break;
+            case DataType::F16:
+            case DataType::UINT16:
+            case DataType::INT16:
+                components_per_register = 2;
+                break;
+            case DataType::UINT8:
+            case DataType::INT8:
+            case DataType::C10:
+                components_per_register = 4;
+                break;
+            default:
+                break;
+            }
+
+            if (components_per_register) {
+                const uint32_t from_registers = static_cast<uint32_t>(size) * components_per_register;
+                // When the program pins the count, prefer its register layout.
+                if ((descriptor->component_info & 0x40) != 0x40) {
+                    tex_query_info.store_component_count = static_cast<uint8_t>(std::min(from_registers, num_component));
+                } else if (tex_query_info.component_count > from_registers) {
+                    tex_query_info.store_component_count = static_cast<uint8_t>(from_registers);
+                }
+            }
+
             tex_query_info.dest_offset = pa_offset;
 
             tex_query_info.coord_index = tex_coord_index;
