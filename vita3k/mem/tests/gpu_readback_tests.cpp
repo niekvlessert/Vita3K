@@ -18,15 +18,15 @@
 #include <atomic>
 #include <cerrno>
 #include <chrono>
-#include <cstring>
 #include <cstdlib>
-#include <new>
+#include <cstring>
 #include <dlfcn.h>
 #include <iostream>
 #include <mach/mach.h>
 #include <mach/mach_vm.h>
 #include <mem/functions.h>
 #include <mem/state.h>
+#include <new>
 #include <signal.h>
 #include <stdexcept>
 #include <sys/mman.h>
@@ -92,8 +92,8 @@ int main() try {
     for (int kind = 0; kind < 3; ++kind) {
         fail_next_allocation = true;
         const auto failed = kind == 0 ? alloc(mem, 16384, "metadata failure")
-            : kind == 1 ? try_alloc_at(mem, 0x81000000, 16384, "metadata failure")
-                        : alloc_aligned(mem, 16384, "metadata failure", 65536);
+            : kind == 1               ? try_alloc_at(mem, 0x81000000, 16384, "metadata failure")
+                                      : alloc_aligned(mem, 16384, "metadata failure", 65536);
         require(!fail_next_allocation.exchange(false), "allocation failure was not injected");
         require(!failed && mem_available(mem) == available && mem.allocation_generations.size() == initial_generations, "allocation metadata rollback");
     }
