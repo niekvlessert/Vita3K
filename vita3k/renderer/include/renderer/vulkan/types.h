@@ -364,6 +364,9 @@ struct VKRenderTarget : public renderer::RenderTarget {
     vk::Device device;
     uint16_t width;
     uint16_t height;
+    // Original render-target extent, preserved across GXM scenes.
+    uint16_t base_width;
+    uint16_t base_height;
     vkutil::Image color;
     vkutil::Image depthstencil;
     vkutil::Image mask;
